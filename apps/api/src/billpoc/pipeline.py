@@ -22,8 +22,16 @@ from decimal import Decimal
 from .config import Config
 from .extract.claude import Extrator, Uso
 from .extract.nfe_xml import extrair_de_xml
-from .extract.pdf import contar_paginas, texto_de_pdf
-from .extract.schemas import CampoTexto, DocumentoExtraido, Triagem
+from .extract.pdf import contar_paginas, protegido_por_senha, texto_de_pdf
+from .extract.schemas import (
+    CampoCategoria,
+    CampoData,
+    CampoRecorrencia,
+    CampoTexto,
+    CampoValor,
+    DocumentoExtraido,
+    Triagem,
+)
 from .ingest.base import Anexo, EmailCapturado
 from .store.repositories import Repositorio
 from .validate.boleto import encontrar_linhas_digitaveis
@@ -166,7 +174,17 @@ class Pipeline:
 
         # --- extração -----------------------------------------------------------------
         origem_extracao = "llm"
-        if anexo is not None and anexo.e_xml:
+        if anexo is not None and anexo.e_pdf and protegido_por_senha(anexo.conteudo):
+            # Boleto protegido por senha (a senha costuma ser o CPF/CNPJ do pagador).
+            # Não dá para ler, mas não pode quebrar o lote nem virar erro no log:
+            # registra o que se sabe e manda para revisão com o motivo.
+            extraido = _documento_ilegivel(
+                f"o PDF {anexo.nome_arquivo!r} está protegido por senha e não pôde "
+                "ser lido automaticamente — abra manualmente (a senha costuma ser o "
+                "CPF/CNPJ do pagador) e preencha os campos"
+            )
+            self.repo.registrar_passo(run_id, "extract", document_id=document_id)
+        elif anexo is not None and anexo.e_xml:
             # XML da NF-e é dado estruturado assinado digitalmente. Passar isso por um
             # modelo seria trocar certeza por probabilidade — o parser lê direto, e os
             # campos nascem determinísticos.
@@ -264,6 +282,36 @@ class Pipeline:
                 )
             }
         )
+
+
+def _documento_ilegivel(motivo: str) -> DocumentoExtraido:
+    """Um DocumentoExtraido vazio, com o motivo em `observacoes`.
+
+    Todo campo fica em branco com confiança 0 — a política de decisão então manda para
+    revisão por falta de valor e de vencimento, que é o comportamento correto quando
+    não há como ler o documento.
+    """
+    vazio = CampoTexto(valor=None, confianca=0.0)
+    return DocumentoExtraido(
+        tipo_documento="boleto",
+        beneficiario=vazio,
+        cnpj=vazio,
+        valor=CampoValor(valor_reais=None, confianca=0.0),
+        vencimento=CampoData(data=None, confianca=0.0),
+        data_emissao=CampoData(data=None, confianca=0.0),
+        linha_digitavel=vazio,
+        pix_copia_e_cola=vazio,
+        numero_nf=vazio,
+        chave_nfe=vazio,
+        categoria=CampoCategoria(
+            categoria="OUTROS", confianca=0.0, justificativa="documento ilegível"
+        ),
+        recorrencia=CampoRecorrencia(
+            recorrencia="unico", confianca=0.0, justificativa="documento ilegível"
+        ),
+        descricao="Documento não pôde ser lido automaticamente",
+        observacoes=motivo,
+    )
 
 
 def _sufixo(nome_arquivo: str) -> str:

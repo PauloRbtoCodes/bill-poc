@@ -301,9 +301,18 @@ class Extrator:
 
     # ---------------------------------------------------------------------------------
 
+    # `adaptive` só existe em Opus/Sonnet 5 e na família 4.6+. Haiku 4.5 rejeita.
+    # Para classificar e extrair com schema estrito o thinking não é necessário —
+    # a garantia dura vem dos validadores, não do raciocínio do modelo.
+    _MODELOS_COM_ADAPTIVE = ("opus-5", "sonnet-5", "fable-5", "opus-4-6", "opus-4-7", "opus-4-8", "sonnet-4-6")
+
     def _chamar(
         self, *, modelo: str, system: str, blocos: list[dict], output_format: type[T], max_tokens: int
     ) -> tuple[T, Uso]:
+        extra: dict = {}
+        if any(m in modelo for m in self._MODELOS_COM_ADAPTIVE):
+            extra["thinking"] = {"type": "adaptive"}
+
         inicio = time.monotonic()
         resposta = self.client.messages.parse(
             model=modelo,
@@ -311,7 +320,7 @@ class Extrator:
             system=system,
             messages=[{"role": "user", "content": blocos}],
             output_format=output_format,
-            thinking={"type": "adaptive"},
+            **extra,
         )
         latencia = int((time.monotonic() - inicio) * 1000)
 

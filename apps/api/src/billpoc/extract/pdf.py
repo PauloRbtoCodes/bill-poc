@@ -53,3 +53,24 @@ def contar_paginas(conteudo: bytes) -> int | None:
             return len(pdf.pages)
     except Exception:  # noqa: BLE001 — contagem de páginas é informativa
         return None
+
+
+def protegido_por_senha(conteudo: bytes) -> bool:
+    """True se o PDF está cifrado.
+
+    Boleto protegido é um caso real (bancos e imobiliárias cifram com o CPF/CNPJ do
+    pagador como senha). Muitos usam senha de usuário vazia mas com restrição de
+    permissões — o `pdfplumber` abre esses, mas a API da Anthropic recusa. Por isso a
+    checagem é pelo dicionário `/Encrypt` no PDF, não por tentativa de abrir.
+    """
+    # O /Encrypt fica no trailer, perto do fim. Basta olhar os últimos KB.
+    if b"/Encrypt" in conteudo[-4096:] or b"/Encrypt" in conteudo[:4096]:
+        return True
+    try:
+        import pdfplumber
+
+        with pdfplumber.open(io.BytesIO(conteudo)):
+            return False
+    except Exception as exc:  # noqa: BLE001
+        msg = str(exc).lower()
+        return "password" in msg or "encrypt" in msg
