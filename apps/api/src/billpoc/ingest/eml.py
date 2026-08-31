@@ -13,9 +13,9 @@ Gmail. O mesmo parser lê os dois lados.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
 
 from .base import EmailCapturado, parse_rfc822
 

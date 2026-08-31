@@ -16,9 +16,9 @@ primeira; a segunda é outra implementação de `MailSource`.
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
 
 from .base import EmailCapturado, parse_rfc822
 

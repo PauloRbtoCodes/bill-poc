@@ -16,12 +16,13 @@ import email
 import email.policy
 import hashlib
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.header import decode_header, make_header
 from email.message import EmailMessage
 from email.utils import getaddresses, parsedate_to_datetime
-from typing import Iterator, Protocol
+from typing import Protocol
 
 # Partes que são decoração do e-mail, não documento. Assinatura corporativa em PNG e
 # rastreador de abertura em GIF de 1px entrariam como "anexo" e poluiriam a triagem.
@@ -164,7 +165,7 @@ def _texto_da_parte(parte: EmailMessage) -> str:
     """
     try:
         conteudo = parte.get_payload(decode=True)
-    except Exception:
+    except Exception:  # noqa: BLE001 — charset exótico não pode perder o e-mail
         return ""
     if conteudo is None:
         return ""
