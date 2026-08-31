@@ -177,9 +177,17 @@ class Extrator:
     @property
     def client(self):
         if self._client is None:
+            import os
+
             import anthropic
 
-            self._client = anthropic.Anthropic()
+            # Uma chave "identity-linked" (criada dentro de um workspace) exige o
+            # cabeçalho anthropic-workspace-id em toda requisição. Chave de conta comum
+            # não precisa — por isso é opcional.
+            headers = {}
+            if ws := os.getenv("ANTHROPIC_WORKSPACE_ID"):
+                headers["anthropic-workspace-id"] = ws
+            self._client = anthropic.Anthropic(default_headers=headers or None)
         return self._client
 
     # ---------------------------------------------------------------------------------

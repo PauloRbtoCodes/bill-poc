@@ -98,4 +98,20 @@ Registro do que foi feito, em ordem. Atualizar a cada etapa concluída.
 - **`README.md`** — os entregáveis 1, 3, 4 e 5.
 
 **Estado:** 107 testes passando (12 ponta a ponta contra Postgres real), ruff e tsc
-limpos. Falta: rodar sobre a caixa real quando as credenciais existirem.
+limpos.
+
+### 2026-08-31 (cont.) — credenciais reais
+
+- **Gmail OAuth concluído.** O servidor de callback local não sobrevive neste ambiente
+  (processos spawnados de um comando são mortos), então o fluxo virou dois passos manuais
+  em `scripts/gmail_auth.py`: gerar URL → colar a URL de redirecionamento. Precisou de
+  `OAUTHLIB_INSECURE_TRANSPORT=1` porque o redirect é `http://localhost`.
+- **Bug corrigido:** `GMAIL_CREDENTIALS=credentials.json` no `.env` resolvia a partir do
+  cwd. Agora caminho relativo conta a partir da raiz do repo (`config._caminho`).
+- **`token.json` gerado** — `billpoc doctor` todo verde, leitura da caixa real testada
+  (8 e-mails: 2 boletos encaminhados de `gestao.btk@gmail.com`, resto ruído).
+- **Chave da Anthropic é identity-linked** → exige cabeçalho `anthropic-workspace-id`.
+  Suporte adicionado em `Extrator.client` via env `ANTHROPIC_WORKSPACE_ID`.
+
+**Pendente do usuário:** preencher `ANTHROPIC_WORKSPACE_ID` no `.env` (ou trocar por uma
+chave de conta comum). Depois: `billpoc ingest && billpoc run` processa a caixa real.
