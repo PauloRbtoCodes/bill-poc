@@ -115,3 +115,20 @@ limpos.
 
 **Pendente do usuário:** preencher `ANTHROPIC_WORKSPACE_ID` no `.env` (ou trocar por uma
 chave de conta comum). Depois: `billpoc ingest && billpoc run` processa a caixa real.
+
+### 2026-08-31 (cont.) — pipeline rodou sobre a caixa real
+
+- Chave trocada por uma que funciona. `billpoc ingest --limite 60` baixou 48 e-mails.
+- **Bug:** `adaptive thinking` não existe em `claude-haiku-4-5` (400). Agora só é enviado
+  para Opus/Sonnet 5 e família 4.6+.
+- **Bug:** dois boletos vinham em PDF cifrado (senha = CPF/CNPJ do pagador). `pdfplumber`
+  abre, mas a API da Anthropic recusa. Detecção por `/Encrypt` nos bytes; o registro cai
+  em revisão com o motivo, sem quebrar o lote.
+- **Resultado real:** 48 e-mails → 42 ruído (87%), 6 cobranças, 6 payables (2 auto, 4
+  revisar), **0 erros**, US$ 0,36. Fornecedores extraídos: LELLO CONDOMÍNIOS (R$ 415,11),
+  STARFIBER/LORD INTERNET (R$ 89,90 — mesmo ISP com dois nomes), MAC IBIRAPUERA.
+- A caixa também tem e-mails de teste de outro candidato ("Conciliação Maio/2026",
+  "Demo Conciliacao v21") — todos classificados como ruído corretamente.
+
+**Estado final:** POC completa, roda offline (`billpoc semear`) e sobre a caixa real.
+107 testes, ruff/tsc limpos. API em :8000, UI em :3000.
