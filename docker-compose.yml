@@ -1,0 +1,25 @@
+# Postgres local para desenvolvimento e para a demo rodar sem depender do Supabase.
+# O schema é o mesmo dos dois lados — `db/schema.sql` aplica igual em ambos.
+#
+#   docker compose up -d
+#   psql "postgresql://postgres:billpoc@localhost:55432/billpoc" -f db/schema.sql -f db/seed.sql
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: billpoc-pg
+    environment:
+      POSTGRES_PASSWORD: billpoc
+      POSTGRES_DB: billpoc
+    ports:
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d billpoc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
