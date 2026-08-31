@@ -125,11 +125,24 @@ class Conciliacao:
     def confianca_geral(self) -> float:
         """O elo mais fraco entre os campos que importam para pagar corretamente.
 
-        Média esconde problema: um CNPJ com confiança 0.2 no meio de nove campos
-        perfeitos ainda dá média alta. O mínimo é a leitura honesta.
+        Duas escolhas aqui:
+
+        **Mínimo, não média.** Média esconde problema: um CNPJ com confiança 0.2 no meio
+        de nove campos perfeitos ainda dá média alta. O mínimo é a leitura honesta.
+
+        **Campo ausente não entra na conta.** Um campo que o documento simplesmente não
+        tem — CNPJ num boleto informal, por exemplo — não é uma leitura duvidosa, é uma
+        ausência. Se ele puxasse a confiança para zero, o número deixaria de distinguir
+        "não sei ler isto" de "isto não existe aqui", que são problemas diferentes e têm
+        tratamentos diferentes. A ausência já aparece nas verificações bloqueantes, que é
+        onde ela pertence.
         """
         criticos = ("valor", "data_vencimento", "cnpj", "beneficiario")
-        presentes = [self.campos[n].confianca for n in criticos if n in self.campos]
+        presentes = [
+            self.campos[n].confianca
+            for n in criticos
+            if n in self.campos and self.campos[n].valor is not None
+        ]
         return round(min(presentes), 3) if presentes else 0.0
 
     def motivos(self) -> list[str]:

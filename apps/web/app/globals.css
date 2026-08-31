@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased;
+  font-feature-settings: "tnum" 1; /* números tabulares: coluna de valores alinhada */
+}
+
+/* Dinheiro, datas e linha digitável alinhados verticalmente na tabela. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

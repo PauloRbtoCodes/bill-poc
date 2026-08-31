@@ -215,6 +215,11 @@ create table payables (
     numero_documento        text,          -- nº da NF
     chave_nfe               text,
     descricao               text,
+    -- O nome do beneficiário como apareceu no documento. Fica no payable, e não só no
+    -- vendor, porque nem toda cobrança traz CNPJ — e sem CNPJ não se cria fornecedor
+    -- (casar por nome erraria). O payable registra o que o documento disse; o vendor é
+    -- a entidade conciliada. São coisas diferentes e ambas precisam existir.
+    beneficiario_nome       text,
 
     valor_centavos          bigint not null check (valor_centavos >= 0),
     moeda                   char(3) not null default 'BRL',
@@ -397,7 +402,7 @@ select
     p.status,
     p.faixa,
     p.confianca_geral,
-    v.razao_social                                  as fornecedor,
+    coalesce(v.razao_social, p.beneficiario_nome)   as fornecedor,
     v.cnpj,
     p.valor_centavos,
     p.data_vencimento,
@@ -425,7 +430,7 @@ create view agenda_pagamento as
 select
     p.id,
     p.org_id,
-    v.razao_social                  as fornecedor,
+    coalesce(v.razao_social, p.beneficiario_nome) as fornecedor,
     v.cnpj,
     p.valor_centavos,
     p.data_vencimento,

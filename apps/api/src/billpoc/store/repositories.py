@@ -315,12 +315,14 @@ class Repositorio:
                 """
                 insert into payables (
                     org_id, vendor_id, tipo_documento, numero_documento, chave_nfe,
-                    descricao, valor_centavos, data_emissao, data_vencimento,
+                    descricao, beneficiario_nome,
+                    valor_centavos, data_emissao, data_vencimento,
                     categoria_id, recorrencia, status, faixa, confianca_geral,
                     email_message_id, document_id, run_id, duplicado_de_id
                 ) values (
                     %(org)s, %(vendor)s, %(tipo)s, %(numero)s, %(chave)s,
-                    %(descricao)s, %(valor)s, %(emissao)s, %(vencimento)s,
+                    %(descricao)s, %(beneficiario)s,
+                    %(valor)s, %(emissao)s, %(vencimento)s,
                     %(categoria)s, %(recorrencia)s, %(status)s, %(faixa)s, %(conf)s,
                     %(email)s, %(doc)s, %(run)s, %(dup)s
                 ) returning id
@@ -332,6 +334,9 @@ class Repositorio:
                     "numero": campos.get("numero_documento", _vazio()).valor,
                     "chave": conciliacao.chave.chave if conciliacao.chave else None,
                     "descricao": extraido.descricao,
+                    "beneficiario": (
+                        campos["beneficiario"].valor if "beneficiario" in campos else None
+                    ),
                     "valor": int(valor * 100) if valor is not None else 0,
                     "emissao": _como_data(emissao.valor if emissao else None),
                     "vencimento": _como_data(vencimento.valor if vencimento else None),
@@ -483,7 +488,8 @@ class Repositorio:
         with self.conexao.cursor() as cur:
             cur.execute(
                 """
-                select p.*, v.razao_social as fornecedor, v.cnpj,
+                select p.*, coalesce(v.razao_social, p.beneficiario_nome) as fornecedor,
+                       v.cnpj,
                        c.codigo as categoria_codigo,
                        em.assunto as email_assunto, em.remetente as email_remetente,
                        em.recebido_em, em.corpo_texto as email_corpo,
@@ -540,6 +546,52 @@ class Repositorio:
             payable["historico"] = cur.fetchall()
             return payable
 
+    def ruido(self) -> list[dict[str, Any]]:
+        """E-mails que a triagem classificou como não sendo conta a pagar.
+
+        Ficam visíveis de propósito. Ruído descartado em silêncio é um falso negativo
+        que ninguém descobre — e o falso negativo aqui é uma conta perdida, que vira
+        multa. O Finance Partner passa o olho e reclassifica o que estiver errado.
+        """
+        with self.conexao.cursor() as cur:
+            cur.execute(
+                """
+                select distinct on (em.id)
+                       em.id as email_id, em.assunto, em.remetente, em.recebido_em,
+                       c.confianca, c.justificativa, c.tipo_documento,
+                       (select count(*) from documents d
+                         where d.email_message_id = em.id) as anexos
+                  from classifications c
+                  join processing_runs r on r.id = c.run_id
+                  join email_messages em on em.id = c.email_message_id
+                 where r.org_id = %s and not c.e_conta_a_pagar
+                   and c.corrigido_para is distinct from true
+                 order by em.id, c.criado_em desc
+                """,
+                (self.org_id,),
+            )
+            linhas = cur.fetchall()
+        return sorted(linhas, key=lambda x: x["recebido_em"], reverse=True)
+
+    def reclassificar(self, email_id: str, ator_id: str) -> None:
+        """Marca que um e-mail dado como ruído era, na verdade, uma cobrança.
+
+        Não reprocessa aqui — grava o rótulo correto. É esse rótulo que mede a taxa de
+        falso negativo da triagem e alimenta o ajuste do prompt.
+        """
+        with self.conexao.cursor() as cur:
+            cur.execute(
+                """
+                update classifications
+                   set corrigido_para = true, corrigido_por = %s, corrigido_em = now()
+                 where email_message_id = %s and not e_conta_a_pagar
+                """,
+                (ator_id, email_id),
+            )
+        self.registrar_acao(
+            None, "reclassificar", ator_id, observacao=f"e-mail {email_id} marcado como cobrança"
+        )
+
     def agenda(self) -> list[dict[str, Any]]:
         with self.conexao.cursor() as cur:
             cur.execute(
@@ -555,7 +607,7 @@ class Repositorio:
 
     def registrar_acao(
         self,
-        payable_id: str,
+        payable_id: str | None,
         acao: str,
         ator_id: str,
         campo: str | None = None,

@@ -86,6 +86,23 @@ def arquivo(document_id: str, repo: Repositorio = Repo) -> FileResponse:
     )
 
 
+@app.get("/api/ruido")
+def ruido(repo: Repositorio = Repo) -> list[dict[str, Any]]:
+    """O que a triagem descartou, com o motivo. Visível para poder ser contestado."""
+    return repo.ruido()
+
+
+@app.post("/api/emails/{email_id}/reclassificar")
+def reclassificar(email_id: str, repo: Repositorio = Repo) -> dict[str, Any]:
+    """O Finance Partner discorda da triagem: isto era uma cobrança.
+
+    O rótulo corrigido é o que mede falso negativo — o erro caro desta etapa, porque
+    uma conta perdida vira multa e ninguém descobre por conta própria.
+    """
+    repo.reclassificar(email_id, USUARIO_FP)
+    return {"ok": True}
+
+
 @app.get("/api/agenda")
 def agenda(repo: Repositorio = Repo) -> list[dict[str, Any]]:
     """Aprovados e ainda não agendados, com a forma de pagamento junto."""

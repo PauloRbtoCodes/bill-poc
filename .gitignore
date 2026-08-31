@@ -29,3 +29,7 @@ out/
 # Sistema
 .DS_Store
 *.log
+
+# Storage local de anexos e cache de respostas de LLM
+.storage/
+.cache/

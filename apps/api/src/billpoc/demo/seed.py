@@ -421,7 +421,7 @@ def _cenarios() -> list[Cenario]:
     ld7 = _linha_arrecadacao(valor7)
     pdf7 = boleto_pdf(
         beneficiario="COMPANHIA DE ENERGIA DEMONSTRACAO",
-        cnpj="60.746.948/0001-12",
+        cnpj="12.345.678/0001-95",
         sacado=NOSSA_EMPRESA,
         valor=brl(valor7),
         vencimento="05/09/2026",
@@ -459,7 +459,7 @@ def _cenarios() -> list[Cenario]:
                 tipo_documento="fatura",
                 beneficiario=_campo("COMPANHIA DE ENERGIA DEMONSTRACAO", 0.96,
                                     "COMPANHIA DE ENERGIA DEMONSTRACAO"),
-                cnpj=_campo("60746948000112", 0.93, "CNPJ: 60.746.948/0001-12"),
+                cnpj=_campo("12345678000195", 0.93, "CNPJ: 12.345.678/0001-95"),
                 valor=CampoValor(valor_reais="1876.43", confianca=0.95, evidencia="R$ 1.876,43"),
                 vencimento=CampoData(data="2026-09-05", confianca=0.94,
                                      evidencia="Vencimento: 05/09/2026"),
