@@ -152,6 +152,30 @@ def ingest(
 
 
 @app.command()
+def semear() -> None:
+    """Gera a caixa de demonstração: fixtures .eml + cache de LLM pré-populado.
+
+    Deixa o projeto executável sem nenhuma credencial, e dá à demo cenários escolhidos
+    em vez de sorteados — um conflito de valor, um comprovante que parece cobrança, um
+    boleto reenviado, um documento ilegível.
+    """
+    from .demo.seed import semear as gerar
+
+    cfg = _cfg()
+    cenarios = gerar(cfg.fixtures_dir, cfg.cache_dir, cfg.modelo_triagem, cfg.modelo_extracao)
+
+    tabela = Table("#", "Cenário", "O que demonstra", title="Caixa de demonstração",
+                   title_justify="left")
+    for i, c in enumerate(cenarios, start=1):
+        tabela.add_row(str(i), c.nome, c.explicacao or "—")
+    console.print(tabela)
+    console.print(
+        f"\n[green]{len(cenarios)} e-mail(s)[/] em {cfg.fixtures_dir}\n"
+        "Agora: [bold]billpoc run --somente-cache[/]"
+    )
+
+
+@app.command()
 def initdb() -> None:
     """Aplica db/schema.sql e db/seed.sql no banco configurado."""
     cfg = _cfg()

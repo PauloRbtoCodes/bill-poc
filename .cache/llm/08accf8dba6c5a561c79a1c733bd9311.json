@@ -1,0 +1,18 @@
+{
+  "resultado": {
+    "e_conta_a_pagar": false,
+    "confianca": 0.97,
+    "tipo_documento": "outro",
+    "justificativa": "Newsletter de conteúdo com link de descadastro. Não há documento de cobrança nem obrigação de pagamento.",
+    "anexos_relevantes": []
+  },
+  "uso": {
+    "modelo": "claude-haiku-4-5",
+    "prompt_version": "2026-08-31.1",
+    "input_tokens": 780,
+    "output_tokens": 140,
+    "latencia_ms": 640,
+    "custo_centavos": "0.1480",
+    "request_id": null
+  }
+}

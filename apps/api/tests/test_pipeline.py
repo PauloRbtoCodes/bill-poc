@@ -55,8 +55,49 @@ def conexao():
 
 
 @pytest.fixture
-def repo(conexao):
-    return Repositorio(conexao, ORG_DEMO)
+def org(conexao):
+    """Uma org nova por teste.
+
+    Isolamento de verdade em vez de "espero que o banco esteja vazio": os testes rodam
+    no mesmo Postgres que a caixa de demonstração, e uma suíte que só passa com o banco
+    limpo é uma suíte que vai falhar na hora errada. Como `org_id` já está em todas as
+    tabelas por causa do multi-tenant, sai de graça.
+    """
+    with conexao.cursor() as cur:
+        cur.execute("insert into orgs (nome) values ('teste') returning id")
+        org_id = str(cur.fetchone()["id"])
+        # O Finance Partner e as categorias que o pipeline espera encontrar.
+        cur.execute(
+            "insert into usuarios (id, org_id, email, nome) values "
+            "('00000000-0000-0000-0000-0000000000f1', %s, 'fp@teste', 'FP') "
+            "on conflict do nothing",
+            (org_id,),
+        )
+        cur.execute(
+            """
+            insert into expense_categories (org_id, codigo, nome)
+            select %s, codigo, nome from expense_categories where org_id = %s
+            """,
+            (org_id, ORG_DEMO),
+        )
+    return org_id
+
+
+@pytest.fixture
+def repo(conexao, org):
+    return Repositorio(conexao, org)
+
+
+@pytest.fixture
+def conta(conexao, org):
+    """Conta linhas de uma tabela dentro da org do teste."""
+
+    def _contar(tabela: str, coluna: str = "org_id") -> int:
+        with conexao.cursor() as cur:
+            cur.execute(f"select count(*) as n from {tabela} where {coluna} = %s", (org,))
+            return cur.fetchone()["n"]
+
+    return _contar
 
 
 class ExtratorFalso:
@@ -93,8 +134,8 @@ def montar_pipeline(repo, extrator) -> Pipeline:
         mailbox="financeiro.test@gmail.com",
         fixtures_dir=__import__("pathlib").Path("fixtures"),
         cache_dir=__import__("pathlib").Path(".cache"),
-        storage_dir=__import__("pathlib").Path(".storage"),
-        org_id=ORG_DEMO,
+        storage_dir=__import__("pathlib").Path("/tmp/billpoc-test-storage"),
+        org_id=repo.org_id,
     )
     return Pipeline(cfg, repo, extrator)
 
@@ -149,8 +190,10 @@ def test_custo_e_latencia_ficam_registrados(repo, conexao):
 
     with conexao.cursor() as cur:
         cur.execute(
-            "select etapa, modelo, custo_centavos from processing_steps "
-            "where modelo is not null order by etapa"
+            "select ps.etapa, ps.modelo, ps.custo_centavos from processing_steps ps "
+            "join processing_runs r on r.id = ps.run_id "
+            "where ps.modelo is not null and r.org_id = %s order by ps.etapa",
+            (repo.org_id,),
         )
         passos = cur.fetchall()
 
@@ -182,7 +225,11 @@ def test_ruido_nao_gera_payable_mas_fica_registrado(repo, conexao):
     assert extrator.chamadas_extracao == 0, "gastou o modelo caro em ruído"
 
     with conexao.cursor() as cur:
-        cur.execute("select e_conta_a_pagar, justificativa from classifications")
+        cur.execute(
+            "select c.e_conta_a_pagar, c.justificativa from classifications c "
+            "join processing_runs r on r.id = c.run_id where r.org_id = %s",
+            (repo.org_id,),
+        )
         linha = cur.fetchone()
     assert linha["e_conta_a_pagar"] is False
     assert "Newsletter" in linha["justificativa"]
@@ -193,7 +240,7 @@ def test_ruido_nao_gera_payable_mas_fica_registrado(repo, conexao):
 # ------------------------------------------------------------------------------------
 
 
-def test_reprocessar_o_mesmo_email_nao_duplica(repo, conexao):
+def test_reprocessar_o_mesmo_email_nao_duplica(repo, conta):
     linha = montar_boleto_bancario(vencimento=VENCIMENTO, valor=VALOR)
     extrator = ExtratorFalso(montar_triagem(), montar_extraido(linha=linha))
     pipeline = montar_pipeline(repo, extrator)
@@ -205,12 +252,9 @@ def test_reprocessar_o_mesmo_email_nao_duplica(repo, conexao):
     assert not primeira.ja_processado
     assert segunda.ja_processado
 
-    with conexao.cursor() as cur:
-        cur.execute("select count(*) as n from email_messages")
-        assert cur.fetchone()["n"] == 1
-        # Mas os dois runs ficam: dá para comparar o resultado de duas execuções.
-        cur.execute("select count(*) as n from processing_runs")
-        assert cur.fetchone()["n"] == 2
+    assert conta("email_messages") == 1
+    # Mas os dois runs ficam: dá para comparar o resultado de duas execuções.
+    assert conta("processing_runs") == 2
 
 
 def test_boleto_reenviado_e_marcado_como_duplicata(repo):

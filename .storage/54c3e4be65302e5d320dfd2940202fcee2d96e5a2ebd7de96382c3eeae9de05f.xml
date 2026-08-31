@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe35260800000000000191550010000882131123456784" versao="4.00">
+      <ide><cUF>35</cUF><nNF>88213</nNF><serie>1</serie><mod>55</mod>
+        <dhEmi>2026-08-22T14:03:00-03:00</dhEmi><tpNF>1</tpNF></ide>
+      <emit><CNPJ>00000000000191</CNPJ><xNome>ALFA DISTRIBUIDORA DE MATERIAIS SA</xNome>
+        <enderEmit><xMun>Sao Paulo</xMun><UF>SP</UF></enderEmit></emit>
+      <dest><CNPJ>11222333000181</CNPJ><xNome>Cliente Demo Ltda</xNome></dest>
+      <total><ICMSTot><vProd>4560.90</vProd><vNF>4560.90</vNF></ICMSTot></total>
+      <cobr><fat><nFat>88213</nFat><vLiq>4560.90</vLiq></fat>
+        <dup><nDup>001</nDup><dVenc>2026-09-21</dVenc><vDup>4560.90</vDup></dup></cobr>
+    </infNFe>
+  </NFe>
+</nfeProc>

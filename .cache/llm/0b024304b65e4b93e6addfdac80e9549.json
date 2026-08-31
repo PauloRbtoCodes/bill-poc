@@ -1,0 +1,71 @@
+{
+  "resultado": {
+    "tipo_documento": "boleto",
+    "beneficiario": {
+      "valor": "MARCENARIA SAO PEDRO",
+      "confianca": 0.61,
+      "evidencia": "MARCENARIA SAO P... (parcialmente cortado na foto)"
+    },
+    "cnpj": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "valor": {
+      "valor_reais": "3200.00",
+      "confianca": 0.44,
+      "evidencia": "R$ 3.2?0,00 — terceiro dígito ilegível"
+    },
+    "vencimento": {
+      "data": "2026-09-12",
+      "confianca": 0.58,
+      "evidencia": "12/09/2026, com reflexo sobre o campo"
+    },
+    "data_emissao": {
+      "data": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "linha_digitavel": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "pix_copia_e_cola": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "numero_nf": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "chave_nfe": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "categoria": {
+      "categoria": "FORNECEDORES",
+      "confianca": 0.6,
+      "justificativa": "Serviço de marcenaria."
+    },
+    "recorrencia": {
+      "recorrencia": "unico",
+      "confianca": 0.7,
+      "justificativa": "Serviço pontual."
+    },
+    "descricao": "Marcenaria — serviço (documento parcialmente ilegível)",
+    "observacoes": "Foto com reflexo e corte na borda direita. A linha digitável não está legível em nenhum ponto da imagem e o valor tem um dígito ambíguo (pode ser R$ 3.200,00 ou R$ 3.230,00). Recomendo pedir o PDF ao fornecedor."
+  },
+  "uso": {
+    "modelo": "claude-opus-5",
+    "prompt_version": "2026-08-31.1",
+    "input_tokens": 3400,
+    "output_tokens": 620,
+    "latencia_ms": 4100,
+    "custo_centavos": "3.2500",
+    "request_id": null
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "resultado": {
+    "tipo_documento": "fatura",
+    "beneficiario": {
+      "valor": "COMPANHIA DE ENERGIA DEMONSTRACAO",
+      "confianca": 0.96,
+      "evidencia": "COMPANHIA DE ENERGIA DEMONSTRACAO"
+    },
+    "cnpj": {
+      "valor": "60746948000112",
+      "confianca": 0.93,
+      "evidencia": "CNPJ: 60.746.948/0001-12"
+    },
+    "valor": {
+      "valor_reais": "1876.43",
+      "confianca": 0.95,
+      "evidencia": "R$ 1.876,43"
+    },
+    "vencimento": {
+      "data": "2026-09-05",
+      "confianca": 0.94,
+      "evidencia": "Vencimento: 05/09/2026"
+    },
+    "data_emissao": {
+      "data": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "linha_digitavel": {
+      "valor": "818000000187764377812340000000000000000000000000",
+      "confianca": 0.92,
+      "evidencia": "818000000187764377812340000000000000000000000000"
+    },
+    "pix_copia_e_cola": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "numero_nf": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "chave_nfe": {
+      "valor": null,
+      "confianca": 0.0,
+      "evidencia": null
+    },
+    "categoria": {
+      "categoria": "UTILIDADES",
+      "confianca": 0.95,
+      "justificativa": "Fatura de energia elétrica."
+    },
+    "recorrencia": {
+      "recorrencia": "recorrente",
+      "confianca": 0.94,
+      "justificativa": "Conta de consumo mensal."
+    },
+    "descricao": "Energia elétrica — UC 7781234, agosto/2026",
+    "observacoes": null
+  },
+  "uso": {
+    "modelo": "claude-opus-5",
+    "prompt_version": "2026-08-31.1",
+    "input_tokens": 3400,
+    "output_tokens": 620,
+    "latencia_ms": 4100,
+    "custo_centavos": "3.2500",
+    "request_id": null
+  }
+}

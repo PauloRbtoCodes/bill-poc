@@ -118,9 +118,33 @@ class Pipeline:
         `None` significa "extraia do corpo do e-mail". Fornecedor pequeno manda a linha
         digitável direto no corpo, sem anexo nenhum — ignorar esse caso perderia contas
         reais.
+
+        **Quando há XML da NF-e, os PDFs são ignorados.** O DANFE é a representação
+        impressa daquele mesmo XML, não um segundo documento: processar os dois geraria
+        duas contas para uma nota só, e a segunda cairia como duplicata — ruído na fila
+        do Finance Partner. O XML é a fonte melhor, então ele manda. Imagens continuam
+        valendo, porque um e-mail pode trazer a NF-e e a foto de um boleto avulso.
         """
         relevantes = [a for a in email.anexos if a.e_pdf or a.e_xml or a.e_imagem]
+        if xmls := [a for a in relevantes if a.e_xml]:
+            return xmls + [a for a in relevantes if a.e_imagem]
         return relevantes or [None]
+
+    def _guardar(self, anexo: Anexo) -> str:
+        """Grava o anexo em disco, nomeado pelo sha256.
+
+        A UI de revisão mostra o PDF ao lado dos campos extraídos — sem o arquivo, o
+        revisor teria que confiar na evidência textual em vez de olhar o documento, que
+        é justamente o que se quer evitar. Nomear pelo hash dá dedup de graça: o mesmo
+        boleto em três e-mails ocupa espaço uma vez.
+
+        Em produção isso seria um bucket privado com URL assinada, não o disco local.
+        """
+        destino = self.config.storage_dir / f"{anexo.sha256}{_sufixo(anexo.nome_arquivo)}"
+        if not destino.exists():
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            destino.write_bytes(anexo.conteudo)
+        return str(destino)
 
     def _processar_documento(
         self,
@@ -134,16 +158,22 @@ class Pipeline:
         document_id = None
         if anexo is not None:
             document_id = self.repo.salvar_documento(
-                email_id, anexo, contar_paginas(anexo.conteudo) if anexo.e_pdf else None
+                email_id,
+                anexo,
+                contar_paginas(anexo.conteudo) if anexo.e_pdf else None,
+                storage_uri=self._guardar(anexo),
             )
 
         # --- extração -----------------------------------------------------------------
+        origem_extracao = "llm"
         if anexo is not None and anexo.e_xml:
             # XML da NF-e é dado estruturado assinado digitalmente. Passar isso por um
-            # modelo seria trocar certeza por probabilidade — o parser lê direto.
+            # modelo seria trocar certeza por probabilidade — o parser lê direto, e os
+            # campos nascem determinísticos.
             extraido = extrair_de_xml(anexo.conteudo)
             if extraido is None:
                 return
+            origem_extracao = "nfe_xml"
             self.repo.registrar_passo(run_id, "extract", document_id=document_id)
         else:
             extraido, uso = self.extrator.extrair(email, anexo)
@@ -161,7 +191,13 @@ class Pipeline:
             vencimento=extraido.vencimento.valor,
         )
 
-        conciliacao = conciliar(extraido, resultado.triagem, referencia=hoje, duplicado_de=duplicado_de)
+        conciliacao = conciliar(
+            extraido,
+            resultado.triagem,
+            referencia=hoje,
+            duplicado_de=duplicado_de,
+            origem_extracao=origem_extracao,
+        )
         resultado.conciliacoes.append(conciliacao)
         self.repo.registrar_passo(run_id, "validate", document_id=document_id)
 
@@ -228,6 +264,11 @@ class Pipeline:
                 )
             }
         )
+
+
+def _sufixo(nome_arquivo: str) -> str:
+    _, ponto, ext = nome_arquivo.rpartition(".")
+    return f".{ext.lower()}" if ponto and len(ext) <= 5 else ""
 
 
 def _apenas_digitos(texto: str | None) -> str | None:

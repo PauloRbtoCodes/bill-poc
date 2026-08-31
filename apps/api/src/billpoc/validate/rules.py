@@ -151,6 +151,7 @@ def _conciliar(
     llm_evidencia: str | None,
     det_valor: Any = None,
     det_origem: Origem | None = None,
+    origem_llm: Origem = "llm",
     formatar=str,
 ) -> tuple[Campo, Verificacao | None]:
     """Resolve um campo entre a leitura do modelo e a fonte determinística.
@@ -164,7 +165,7 @@ def _conciliar(
                 nome=nome,
                 valor=llm_valor,
                 texto=llm_texto,
-                origem="llm",
+                origem=origem_llm,
                 confianca=llm_confianca,
                 evidencia=llm_evidencia,
             ),
@@ -321,8 +322,15 @@ def conciliar(
     *,
     referencia: date | None = None,
     duplicado_de: str | None = None,
+    origem_extracao: Origem = "llm",
 ) -> Conciliacao:
-    """Concilia a extração do LLM com as fontes determinísticas e decide a faixa."""
+    """Concilia a extração com as fontes determinísticas e decide a faixa.
+
+    `origem_extracao` diz de onde vieram os campos antes de qualquer conferência. O
+    padrão é `llm` — leitura, que precisa de corroboração. Quando a extração veio do XML
+    da NF-e, os campos já nascem determinísticos: são dado fiscal estruturado e assinado,
+    não interpretação. Tratá-los como leitura seria jogar fora uma certeza que se tem.
+    """
     hoje = referencia or hoje_brasil()
     resultado = Conciliacao()
 
@@ -350,6 +358,7 @@ def conciliar(
             llm_texto=extraido.valor.valor_reais,
             llm_confianca=extraido.valor.confianca,
             llm_evidencia=extraido.valor.evidencia,
+            origem_llm=origem_extracao,
             det_valor=det_valor,
             det_origem=origem_valor,
             formatar=formatar_brl,
@@ -365,6 +374,7 @@ def conciliar(
             llm_texto=extraido.vencimento.data,
             llm_confianca=extraido.vencimento.confianca,
             llm_evidencia=extraido.vencimento.evidencia,
+            origem_llm=origem_extracao,
             det_valor=det_venc,
             det_origem="codigo_barras" if det_venc else None,
             formatar=lambda d: d.isoformat(),
@@ -383,6 +393,7 @@ def conciliar(
             llm_texto=extraido.cnpj.valor,
             llm_confianca=extraido.cnpj.confianca,
             llm_evidencia=extraido.cnpj.evidencia,
+            origem_llm=origem_extracao,
             det_valor=det_cnpj,
             det_origem="chave_nfe" if det_cnpj else None,
             formatar=cnpj_mod.formatar,
@@ -399,6 +410,7 @@ def conciliar(
             llm_texto=extraido.numero_nf.valor,
             llm_confianca=extraido.numero_nf.confianca,
             llm_evidencia=extraido.numero_nf.evidencia,
+            origem_llm=origem_extracao,
             det_valor=det_numero,
             det_origem="chave_nfe" if det_numero else None,
         )
@@ -414,7 +426,7 @@ def conciliar(
             nome=nome,
             valor=valor,
             texto=getattr(campo_llm, "data", None) or (valor if isinstance(valor, str) else None),
-            origem="llm",
+            origem=origem_extracao,
             confianca=campo_llm.confianca,
             evidencia=campo_llm.evidencia,
         )

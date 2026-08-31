@@ -81,16 +81,23 @@ class Repositorio:
             )
             return str(cur.fetchone()["id"]), False
 
-    def salvar_documento(self, email_id: str, anexo: Anexo, paginas: int | None = None) -> str:
+    def salvar_documento(
+        self,
+        email_id: str,
+        anexo: Anexo,
+        paginas: int | None = None,
+        storage_uri: str | None = None,
+    ) -> str:
         with self.conexao.cursor() as cur:
             cur.execute(
                 """
                 insert into documents (
                     org_id, email_message_id, nome_arquivo, mime_type,
-                    tamanho_bytes, sha256, tipo, paginas
-                ) values (%s, %s, %s, %s, %s, %s, %s, %s)
+                    tamanho_bytes, sha256, tipo, paginas, storage_uri
+                ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 on conflict (org_id, sha256) do update
-                    set nome_arquivo = excluded.nome_arquivo
+                    set nome_arquivo = excluded.nome_arquivo,
+                        storage_uri = coalesce(excluded.storage_uri, documents.storage_uri)
                 returning id
                 """,
                 (
@@ -102,9 +109,19 @@ class Repositorio:
                     anexo.sha256,
                     anexo.classificar(),
                     paginas,
+                    storage_uri,
                 ),
             )
             return str(cur.fetchone()["id"])
+
+    def documento(self, document_id: str) -> dict[str, Any] | None:
+        with self.conexao.cursor() as cur:
+            cur.execute(
+                "select id, nome_arquivo, mime_type, storage_uri from documents "
+                "where id = %s and org_id = %s",
+                (document_id, self.org_id),
+            )
+            return cur.fetchone()
 
     # ---------------------------------------------------------------------------------
     # Execução

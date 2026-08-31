@@ -1,0 +1,204 @@
+"""API HTTP que serve a UI do Finance Partner.
+
+Fina de propósito: toda a lógica está no `Repositorio`, e cada rota é um verbo do fluxo
+de trabalho real — triar, revisar, corrigir, aprovar, agendar. Nenhuma rota faz `update`
+genérico em payable: as transições são nomeadas porque cada uma precisa gerar sua linha
+em `review_actions`.
+
+    uvicorn billpoc.api:app --reload --port 8000
+"""
+
+from __future__ import annotations
+
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
+
+from .config import USUARIO_FP, carregar
+from .store.db import BancoIndisponivel, conectar
+from .store.repositories import Repositorio
+
+cfg = carregar()
+
+app = FastAPI(title="billpoc", description="Contas a pagar a partir de e-mails")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+def _repo():
+    """Uma conexão por requisição. Suficiente para a POC; em produção seria um pool."""
+    try:
+        with conectar(cfg.database_url) as conexao:
+            yield Repositorio(conexao, cfg.org_id)
+    except BancoIndisponivel as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+Repo = Depends(_repo)
+
+
+# ======================================================================================
+# Leitura
+# ======================================================================================
+
+
+@app.get("/api/fila")
+def fila(repo: Repositorio = Repo) -> list[dict[str, Any]]:
+    """A fila de revisão, já ordenada por urgência e número de bloqueios."""
+    return repo.fila_revisao()
+
+
+@app.get("/api/payables/{payable_id}")
+def detalhe(payable_id: str, repo: Repositorio = Repo) -> dict[str, Any]:
+    """Tudo sobre uma conta: campos com proveniência, verificações e histórico."""
+    if (p := repo.detalhe(payable_id)) is None:
+        raise HTTPException(404, "conta não encontrada")
+    return p
+
+
+@app.get("/api/documentos/{document_id}/arquivo")
+def arquivo(document_id: str, repo: Repositorio = Repo) -> FileResponse:
+    """Serve o PDF original para a revisão lado a lado.
+
+    O revisor precisa ver o documento, não só a evidência textual que o modelo alegou
+    ter lido — é o documento que decide um conflito.
+    """
+    doc = repo.documento(document_id)
+    if not doc or not doc["storage_uri"]:
+        raise HTTPException(404, "documento sem arquivo guardado")
+    caminho = Path(doc["storage_uri"])
+    if not caminho.exists():
+        raise HTTPException(404, "arquivo não encontrado no storage")
+    return FileResponse(
+        caminho,
+        media_type=doc["mime_type"],
+        # inline para renderizar no visualizador, não baixar
+        headers={"Content-Disposition": f'inline; filename="{doc["nome_arquivo"]}"'},
+    )
+
+
+@app.get("/api/agenda")
+def agenda(repo: Repositorio = Repo) -> list[dict[str, Any]]:
+    """Aprovados e ainda não agendados, com a forma de pagamento junto."""
+    return repo.agenda()
+
+
+@app.get("/api/relatorio")
+def relatorio(repo: Repositorio = Repo) -> dict[str, Any]:
+    return repo.relatorio()
+
+
+# ======================================================================================
+# Ações do Finance Partner
+# ======================================================================================
+
+
+class EdicaoCampo(BaseModel):
+    valor: str = Field(description="Novo valor. Data em ISO, dinheiro como '1234.56'.")
+
+
+@app.patch("/api/payables/{payable_id}/campos/{campo}")
+def editar(
+    payable_id: str, campo: str, corpo: EdicaoCampo, repo: Repositorio = Repo
+) -> dict[str, Any]:
+    """Corrige um campo.
+
+    Não sobrescreve: a extração original sai de vigência e uma linha nova entra com
+    origem `humano`. O que o modelo tinha lido continua auditável — e é esse par
+    (o que o modelo leu, o que o humano corrigiu) que vira sinal de treino depois.
+    """
+    if repo.detalhe(payable_id) is None:
+        raise HTTPException(404, "conta não encontrada")
+    try:
+        repo.editar_campo(payable_id, campo, corpo.valor, USUARIO_FP)
+    except (ValueError, ArithmeticError) as exc:
+        raise HTTPException(422, f"valor inválido para {campo}: {exc}") from exc
+    return repo.detalhe(payable_id)
+
+
+class Observacao(BaseModel):
+    observacao: str | None = None
+
+
+@app.post("/api/payables/{payable_id}/aprovar")
+def aprovar(
+    payable_id: str, corpo: Observacao | None = None, repo: Repositorio = Repo
+) -> dict[str, Any]:
+    """Libera a conta para a agenda de pagamento.
+
+    Um humano sempre aprova, inclusive o que está na faixa rápida. `auto_ok` decide
+    posição na fila, não autorização.
+    """
+    p = repo.detalhe(payable_id)
+    if p is None:
+        raise HTTPException(404, "conta não encontrada")
+    if p["status"] not in ("em_revisao", "rejeitado"):
+        raise HTTPException(409, f"conta em status {p['status']}, não é aprovável")
+    repo.mudar_status(
+        payable_id, "aprovado", "aprovar", USUARIO_FP, corpo.observacao if corpo else None
+    )
+    return repo.detalhe(payable_id)
+
+
+@app.post("/api/payables/{payable_id}/rejeitar")
+def rejeitar(
+    payable_id: str, corpo: Observacao | None = None, repo: Repositorio = Repo
+) -> dict[str, Any]:
+    if repo.detalhe(payable_id) is None:
+        raise HTTPException(404, "conta não encontrada")
+    repo.mudar_status(
+        payable_id, "rejeitado", "rejeitar", USUARIO_FP, corpo.observacao if corpo else None
+    )
+    return repo.detalhe(payable_id)
+
+
+@app.post("/api/payables/{payable_id}/reabrir")
+def reabrir(payable_id: str, repo: Repositorio = Repo) -> dict[str, Any]:
+    """Traz de volta para revisão — inclusive algo marcado como duplicata por engano."""
+    if repo.detalhe(payable_id) is None:
+        raise HTTPException(404, "conta não encontrada")
+    repo.mudar_status(payable_id, "em_revisao", "reabrir", USUARIO_FP)
+    return repo.detalhe(payable_id)
+
+
+class Agendamento(BaseModel):
+    data_agendada: date
+    banco: str
+    codigo_confirmacao: str | None = Field(
+        default=None, description="Protocolo devolvido pelo banco no agendamento."
+    )
+
+
+@app.post("/api/payables/{payable_id}/agendar")
+def agendar(payable_id: str, corpo: Agendamento, repo: Repositorio = Repo) -> dict[str, Any]:
+    """Registra que o pagamento foi agendado no banco.
+
+    A POC não paga nada. O Finance Partner agenda no internet banking e registra aqui o
+    banco, a data e o protocolo — é a ponte entre o sistema e o que aconteceu de fato.
+    Guardar o protocolo é o que permite reconciliar depois.
+    """
+    p = repo.detalhe(payable_id)
+    if p is None:
+        raise HTTPException(404, "conta não encontrada")
+    if p["status"] != "aprovado":
+        raise HTTPException(
+            409, f"só se agenda conta aprovada; esta está em {p['status']}"
+        )
+    repo.agendar(
+        payable_id, corpo.data_agendada, corpo.banco, corpo.codigo_confirmacao, USUARIO_FP
+    )
+    return repo.detalhe(payable_id)
+
+
+@app.get("/api/health")
+def health() -> dict[str, Any]:
+    return {"ok": True, "org": cfg.org_id, "llm": cfg.tem_llm, "gmail": cfg.tem_gmail}

@@ -1,0 +1,47 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 930 >>
+stream
+BT /F1 14 Tf 40 792 Td (BANCO DEMONSTRACAO S.A.) Tj ET
+BT /F1 9 Tf 40 772 Td (Recibo do Sacado) Tj ET
+BT /F1 11 Tf 40 742 Td (23793.81284 60007.827136 69500.006338 7 15650000987000) Tj ET
+BT /F1 9 Tf 40 702 Td (Beneficiario) Tj ET
+BT /F1 11 Tf 40 687 Td (NORTE LOGISTICA E TRANSPORTES LTDA) Tj ET
+BT /F1 9 Tf 40 670 Td (CNPJ: 60.746.948/0001-12) Tj ET
+BT /F1 9 Tf 350 702 Td (Vencimento) Tj ET
+BT /F1 12 Tf 350 687 Td (10/09/2026) Tj ET
+BT /F1 9 Tf 350 657 Td (Valor do documento) Tj ET
+BT /F1 14 Tf 350 642 Td (R$ 9.870,00) Tj ET
+BT /F1 9 Tf 40 632 Td (Pagador) Tj ET
+BT /F1 11 Tf 40 617 Td (Cliente Demo Ltda) Tj ET
+BT /F1 9 Tf 40 582 Td (Numero do documento: NF 4471) Tj ET
+BT /F1 9 Tf 40 564 Td (Descricao: Frete e armazenagem agosto/2026) Tj ET
+BT /F1 8 Tf 40 522 Td (Apos o vencimento, cobrar multa de 2% e juros de 1% ao mes.) Tj ET
+BT /F1 8 Tf 40 502 Td (Documento gerado para demonstracao. Nao possui valor fiscal.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001222 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1319
+%%EOF

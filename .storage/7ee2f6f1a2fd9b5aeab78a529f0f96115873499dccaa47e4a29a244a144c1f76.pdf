@@ -1,0 +1,47 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 842 >>
+stream
+BT /F1 14 Tf 40 792 Td (DANFE) Tj ET
+BT /F1 9 Tf 40 774 Td (Documento Auxiliar da Nota Fiscal Eletronica) Tj ET
+BT /F1 9 Tf 40 747 Td (Chave de acesso) Tj ET
+BT /F1 9 Tf 40 732 Td (3526 0800 0000 0000 0191 5500 1000 0882 1311 2345 6784) Tj ET
+BT /F1 9 Tf 40 702 Td (Emitente) Tj ET
+BT /F1 11 Tf 40 687 Td (ALFA DISTRIBUIDORA DE MATERIAIS SA) Tj ET
+BT /F1 9 Tf 40 670 Td (CNPJ: 00.000.000/0001-91) Tj ET
+BT /F1 9 Tf 350 702 Td (Numero) Tj ET
+BT /F1 12 Tf 350 687 Td (88213) Tj ET
+BT /F1 9 Tf 350 662 Td (Emissao) Tj ET
+BT /F1 11 Tf 350 647 Td (22/08/2026) Tj ET
+BT /F1 9 Tf 40 622 Td (Valor total da nota) Tj ET
+BT /F1 14 Tf 40 606 Td (R$ 4.560,90) Tj ET
+BT /F1 9 Tf 350 622 Td (Vencimento da duplicata) Tj ET
+BT /F1 12 Tf 350 606 Td (21/09/2026) Tj ET
+BT /F1 8 Tf 40 552 Td (Documento gerado para demonstracao. Nao possui valor fiscal.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001134 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1231
+%%EOF

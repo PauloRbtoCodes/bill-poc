@@ -1,0 +1,20 @@
+{
+  "resultado": {
+    "e_conta_a_pagar": true,
+    "confianca": 0.98,
+    "tipo_documento": "boleto",
+    "justificativa": "Boleto de fornecedor em anexo, com valor e vencimento no corpo.",
+    "anexos_relevantes": [
+      "boleto_acme_082026.pdf"
+    ]
+  },
+  "uso": {
+    "modelo": "claude-haiku-4-5",
+    "prompt_version": "2026-08-31.1",
+    "input_tokens": 780,
+    "output_tokens": 140,
+    "latencia_ms": 640,
+    "custo_centavos": "0.1480",
+    "request_id": null
+  }
+}
