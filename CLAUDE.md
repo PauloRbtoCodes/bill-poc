@@ -76,3 +76,26 @@ Registro do que foi feito, em ordem. Atualizar a cada etapa concluída.
   senha de conta em apps externos em 2022. Caminhos possíveis: App Password (exige 2FA
   na conta) ou OAuth/Gmail API. Escolhido OAuth, que também é a resposta de produção.
 - `git init`, `.gitignore`, `CLAUDE.md`, plano versionado em `docs/plano.md`.
+- **`validate/`** — boleto, CNPJ, chave NF-e, Pix. Aritmética pura, sem I/O.
+  Verificado contra vetores publicamente conferíveis: as três âncoras FEBRABAN do fator
+  de vencimento, o exemplo oficial de CNPJ alfanumérico da Receita, o valor canônico do
+  CRC16-CCITT. Descoberta lateral: as linhas digitáveis que circulam em blogs falham nos
+  próprios DVs — por isso os testes usam boletos construídos.
+- **`db/schema.sql`** — 16 tabelas, 2 views. Aplicado e verificado em Postgres 16 local.
+- **`extract/` + `rules.py`** — schema com evidência por campo; política de decisão em
+  código, fora do prompt.
+- **`ingest/`** — parser RFC822 compartilhado entre `.eml` e Gmail API.
+- **`pipeline.py` + `store/` + `cli.py`** — as seis etapas, persistência transacional,
+  CLI com `doctor`, `auth`, `ingest`, `semear`, `run`, `report`, `inspecionar`.
+- **`demo/`** — 10 cenários com PDFs reais e cache de LLM pré-populado. O projeto roda
+  sem nenhuma credencial. Rodar isso ponta a ponta revelou três bugs (extração via XML
+  perdia a marca de determinística; DANFE + XML geravam duas contas; identificador do
+  boleto de arrecadação fora da faixa), todos corrigidos.
+- **`api.py` + `apps/web/`** — API HTTP e as três telas do Finance Partner. Ver a tela
+  revelou mais dois bugs: fornecedor sem CNPJ sumia da lista, e confiança geral ia a zero
+  por campo ausente. Corrigidos na raiz (coluna `beneficiario_nome` no payable; campos
+  sem valor não entram no cálculo da confiança).
+- **`README.md`** — os entregáveis 1, 3, 4 e 5.
+
+**Estado:** 107 testes passando (12 ponta a ponta contra Postgres real), ruff e tsc
+limpos. Falta: rodar sobre a caixa real quando as credenciais existirem.
