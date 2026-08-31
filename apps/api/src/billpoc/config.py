@@ -64,6 +64,20 @@ class Config:
         return self.gmail_token.exists()
 
 
+def _caminho(env: str, padrao: Path) -> Path:
+    """Resolve um caminho vindo do ambiente.
+
+    Um caminho relativo no `.env` conta a partir da raiz do repositório, não do
+    diretório onde o comando foi chamado — senão `billpoc` rodado de `apps/api/`
+    procuraria `credentials.json` no lugar errado.
+    """
+    valor = os.getenv(env)
+    if not valor:
+        return padrao
+    p = Path(valor).expanduser()
+    return p if p.is_absolute() else (RAIZ / p)
+
+
 def carregar() -> Config:
     return Config(
         database_url=os.getenv(
@@ -72,12 +86,12 @@ def carregar() -> Config:
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
         modelo_triagem=os.getenv("MODELO_TRIAGEM", "claude-haiku-4-5"),
         modelo_extracao=os.getenv("MODELO_EXTRACAO", "claude-opus-5"),
-        gmail_credentials=Path(os.getenv("GMAIL_CREDENTIALS", RAIZ / "credentials.json")),
-        gmail_token=Path(os.getenv("GMAIL_TOKEN", RAIZ / "token.json")),
+        gmail_credentials=_caminho("GMAIL_CREDENTIALS", RAIZ / "credentials.json"),
+        gmail_token=_caminho("GMAIL_TOKEN", RAIZ / "token.json"),
         gmail_query=os.getenv("GMAIL_QUERY", ""),
         mailbox=os.getenv("MAILBOX", "financeiro.test@gmail.com"),
-        fixtures_dir=Path(os.getenv("FIXTURES_DIR", RAIZ / "fixtures")),
-        cache_dir=Path(os.getenv("CACHE_DIR", RAIZ / ".cache" / "llm")),
-        storage_dir=Path(os.getenv("STORAGE_DIR", RAIZ / ".storage")),
+        fixtures_dir=_caminho("FIXTURES_DIR", RAIZ / "fixtures"),
+        cache_dir=_caminho("CACHE_DIR", RAIZ / ".cache" / "llm"),
+        storage_dir=_caminho("STORAGE_DIR", RAIZ / ".storage"),
         org_id=os.getenv("ORG_ID", ORG_DEMO),
     )
