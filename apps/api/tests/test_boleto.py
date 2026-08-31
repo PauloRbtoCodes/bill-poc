@@ -16,7 +16,6 @@ from decimal import Decimal
 import pytest
 
 from billpoc.validate.boleto import (
-    Boleto,
     BoletoError,
     barras_para_linha_bancario,
     codificar_fator,
@@ -157,7 +156,7 @@ def test_valor_adulterado_derruba_o_dv_geral():
 
 
 def test_valor_zerado_e_sinalizado_mas_nao_bloqueia():
-    ld = montar_boleto_bancario(valor=Decimal("0"))
+    ld = montar_boleto_bancario(valor=Decimal(0))
     b = decodificar(ld, referencia=date(2026, 8, 31))
     assert b.valido  # os DVs fecham
     assert b.valor is None  # mas não há valor para conferir

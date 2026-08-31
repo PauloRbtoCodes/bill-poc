@@ -20,9 +20,11 @@ Referência: FEBRABAN, Layout de Código de Barras (padrão vigente).
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
+
+from .tempo import hoje as hoje_brasil
 
 # Data-base do fator de vencimento FEBRABAN. O fator é a quantidade de dias corridos
 # desde esta data; o primeiro fator efetivamente usado foi 1000 = 03/07/2000.
@@ -148,7 +150,7 @@ def decodificar_fator(fator: int, referencia: date | None = None) -> date | None
         # Fora da faixa válida: não dá para confiar. Deixa o LLM decidir e cai em revisão.
         return None
 
-    referencia = referencia or date.today()
+    referencia = referencia or hoje_brasil()
     ciclo_antigo = FATOR_BASE + timedelta(days=fator)
     ciclo_novo = FATOR_ROLLOVER + timedelta(days=fator - FATOR_MIN)
 
