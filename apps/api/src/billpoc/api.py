@@ -10,6 +10,7 @@ em `review_actions`.
 
 from __future__ import annotations
 
+import os
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -186,9 +187,17 @@ def sync(lote: int = 1, repo: Repositorio = Repo) -> ResultadoSync:
     idempotente por `gmail_message_id`, interromper no meio não corrompe nada. Recomeçar
     continua de onde parou.
     """
-    from .extract.claude import Extrator
-    from .ingest.gmail import GmailSource
-    from .pipeline import Pipeline
+    # Import tardio e com erro traduzido: em serverless uma dependência ausente vira um
+    # 500 sem corpo, e o operador fica sem saber se o problema é credencial, rede ou
+    # deploy. Melhor dizer o que faltou.
+    try:
+        from .extract.claude import Extrator
+        from .ingest.gmail import GmailSource
+        from .pipeline import Pipeline
+    except ImportError as exc:
+        raise HTTPException(
+            500, f"dependência ausente no servidor: {exc}. Veja /api/diagnostico."
+        ) from exc
 
     if not cfg.tem_gmail:
         raise HTTPException(400, "Gmail não autorizado — defina GMAIL_TOKEN_JSON")
@@ -210,11 +219,26 @@ def sync(lote: int = 1, repo: Repositorio = Repo) -> ResultadoSync:
     # Baixar a caixa inteira a cada passo para descobrir o que falta transformaria uma
     # sincronização de 50 e-mails em milhares de chamadas à API do Gmail.
     ja_vistos = repo.message_ids_conhecidos()
-    faltando = [i for i in origem.listar_ids(limite=cfg.sync_janela) if i not in ja_vistos]
+    try:
+        ids = origem.listar_ids(limite=cfg.sync_janela)
+    except Exception as exc:
+        raise HTTPException(
+            502, f"falha ao listar a caixa: {type(exc).__name__}: {str(exc)[:400]}"
+        ) from exc
+    faltando = [i for i in ids if i not in ja_vistos]
 
     processados: list[Any] = []
-    for message_id in faltando[: max(1, lote)]:
-        processados.append(pipeline.processar(origem.buscar(message_id)))
+    try:
+        for message_id in faltando[: max(1, lote)]:
+            processados.append(pipeline.processar(origem.buscar(message_id)))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # O pipeline já engole erro por e-mail; o que chega aqui é falha de
+        # infraestrutura (Gmail, banco, credencial) e o operador precisa do motivo.
+        raise HTTPException(
+            502, f"{type(exc).__name__}: {str(exc)[:400]}"
+        ) from exc
 
     pendentes = max(0, len(faltando) - len(processados))
 
@@ -340,3 +364,73 @@ def agendar(payable_id: str, corpo: Agendamento, repo: Repositorio = Repo) -> di
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     return {"ok": True, "org": cfg.org_id, "llm": cfg.tem_llm, "gmail": cfg.tem_gmail}
+
+
+@app.get("/api/diagnostico")
+def diagnostico() -> dict[str, Any]:
+    """Testa cada peça do caminho de sincronização e diz qual quebrou.
+
+    Existe porque um 500 sem corpo é inútil: em serverless o traceback fica no log do
+    host, e depurar por tentativa e erro entre deploys custa minutos por rodada. Aqui
+    cada etapa é isolada e reporta o erro que deu — em três segundos se sabe se o
+    problema é dependência ausente, credencial ou banco.
+
+    Devolve tipo e mensagem da exceção, nunca o traceback: o suficiente para diagnosticar
+    sem expor caminho de arquivo nem estrutura interna.
+    """
+    resultado: dict[str, Any] = {"ambiente": {}, "etapas": {}}
+
+    import sys
+
+    resultado["ambiente"] = {
+        "python": sys.version.split()[0],
+        "tem_llm": cfg.tem_llm,
+        "tem_gmail": cfg.tem_gmail,
+        "gmail_token_json": bool(os.getenv("GMAIL_TOKEN_JSON")),
+        "sync_janela": cfg.sync_janela,
+    }
+
+    def tentar(nome: str, fn) -> None:
+        try:
+            resultado["etapas"][nome] = {"ok": True, "detalhe": fn()}
+        except Exception as exc:  # noqa: BLE001 — o objetivo é justamente capturar tudo
+            resultado["etapas"][nome] = {
+                "ok": False,
+                "erro": type(exc).__name__,
+                "mensagem": str(exc)[:400],
+            }
+
+    def _importar_pipeline():
+        from .pipeline import Pipeline  # noqa: F401
+
+        return "ok"
+
+    def _importar_extrator():
+        from .extract.claude import Extrator  # noqa: F401
+
+        return "ok"
+
+    def _importar_pdf():
+        import pdfplumber
+
+        return pdfplumber.__version__
+
+    def _importar_anthropic():
+        import anthropic
+
+        return anthropic.__version__
+
+    def _gmail_ids():
+        from .ingest.gmail import GmailSource
+
+        origem = GmailSource(cfg.gmail_credentials, cfg.gmail_token, cfg.gmail_query)
+        return f"{len(origem.listar_ids(limite=3))} id(s)"
+
+    tentar("import_pipeline", _importar_pipeline)
+    tentar("import_extrator", _importar_extrator)
+    tentar("import_pdfplumber", _importar_pdf)
+    tentar("import_anthropic", _importar_anthropic)
+    tentar("gmail_listar_ids", _gmail_ids)
+
+    resultado["ok"] = all(e["ok"] for e in resultado["etapas"].values())
+    return resultado
