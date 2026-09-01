@@ -9,7 +9,6 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "python-dotenv>=1.0",
     "pdfplumber>=0.11",
-    "google-api-python-client>=2.150",
     "google-auth-oauthlib>=1.2",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",

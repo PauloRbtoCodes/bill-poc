@@ -16,16 +16,22 @@ primeira; a segunda é outra implementação de `MailSource`.
 from __future__ import annotations
 
 import base64
+import json
 import os
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
+from urllib.error import HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from .base import EmailCapturado, parse_rfc822
 
 # Só leitura. O pipeline nunca precisa apagar, marcar ou responder nada — e um escopo
 # mínimo é o que se quer numa caixa de financeiro de cliente.
 ESCOPOS = ["https://www.googleapis.com/auth/gmail.readonly"]
+
+API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 
 class GmailSource:
@@ -43,7 +49,6 @@ class GmailSource:
         self.token_path = Path(token_path)
         # Query no dialeto de busca do Gmail. Vazia = caixa inteira.
         self.query = query
-        self._service = None
 
     # ---------------------------------------------------------------------------------
     # Autenticação
@@ -103,13 +108,29 @@ class GmailSource:
             self.token_path.write_text(credenciais.to_json())
         return credenciais
 
-    @property
-    def service(self):
-        if self._service is None:
-            from googleapiclient.discovery import build
+    def _get(self, caminho: str, **parametros) -> dict:
+        """Chamada autenticada à API do Gmail.
 
-            self._service = build("gmail", "v1", credentials=self._credenciais())
-        return self._service
+        Feita com `urllib` em vez de `google-api-python-client` de propósito. Aquela
+        biblioteca embute os documentos de descoberta de 598 APIs do Google — 101 MB para
+        usar dois endpoints do Gmail. Numa função serverless isso é a diferença entre
+        caber e não caber no limite do pacote, e em qualquer lugar é cold start mais
+        lento sem contrapartida.
+
+        A autenticação continua na `google-auth`, que é pequena e sabe renovar o token
+        corretamente. O que se descarta é só a camada de descoberta.
+        """
+        credenciais = self._credenciais()
+        query = urlencode({k: v for k, v in parametros.items() if v is not None})
+        url = f"{API_BASE}/{caminho}" + (f"?{query}" if query else "")
+
+        requisicao = Request(url, headers={"Authorization": f"Bearer {credenciais.token}"})
+        try:
+            with urlopen(requisicao, timeout=30) as resposta:
+                return json.loads(resposta.read())
+        except HTTPError as exc:
+            detalhe = exc.read().decode("utf-8", errors="replace")[:400]
+            raise RuntimeError(f"Gmail API {exc.code} em {caminho}: {detalhe}") from exc
 
     # ---------------------------------------------------------------------------------
     # Leitura
@@ -135,16 +156,11 @@ class GmailSource:
         ids: list[str] = []
         pagina = None
         while True:
-            resposta = (
-                self.service.users()
-                .messages()
-                .list(
-                    userId="me",
-                    q=query or None,
-                    pageToken=pagina,
-                    maxResults=min(100, limite - len(ids)) if limite else 100,
-                )
-                .execute()
+            resposta = self._get(
+                "messages",
+                q=query or None,
+                pageToken=pagina,
+                maxResults=min(100, limite - len(ids)) if limite else 100,
             )
             ids.extend(m["id"] for m in resposta.get("messages", []))
             pagina = resposta.get("nextPageToken")
@@ -163,12 +179,7 @@ class GmailSource:
 
     def _buscar(self, message_id: str) -> EmailCapturado:
         """Baixa a mensagem em RFC822 cru — o mesmo formato de um arquivo .eml."""
-        mensagem = (
-            self.service.users()
-            .messages()
-            .get(userId="me", id=message_id, format="raw")
-            .execute()
-        )
+        mensagem = self._get(f"messages/{message_id}", format="raw")
         raw = base64.urlsafe_b64decode(mensagem["raw"])
         return parse_rfc822(
             raw, message_id=message_id, thread_id=mensagem.get("threadId")

@@ -7,5 +7,7 @@ psycopg[binary]>=3.2
 python-dotenv>=1.0
 anthropic>=0.69
 pdfplumber>=0.11
-google-api-python-client>=2.150
-google-auth-oauthlib>=1.2
+# google-auth só: a autenticação e o refresh do token. O google-api-python-client
+# embutiria 101MB de documentos de descoberta de 598 APIs para usar dois endpoints do
+# Gmail — as chamadas são feitas direto por HTTP em ingest/gmail.py.
+google-auth>=2.35
