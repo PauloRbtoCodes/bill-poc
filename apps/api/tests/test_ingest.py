@@ -10,7 +10,7 @@ from email.message import EmailMessage
 
 import pytest
 
-from billpoc.ingest.base import html_para_texto, parse_rfc822
+from billpoc.ingest.base import detectar_encaminhamento, html_para_texto, parse_rfc822
 from billpoc.ingest.eml import EmlSource
 
 
@@ -205,6 +205,99 @@ def test_resumo_trunca_corpo_gigante():
     resumo = e.resumo_para_triagem(limite_corpo=1000)
     assert "truncado" in resumo
     assert len(resumo) < 3000
+
+
+# ------------------------------------------------------------------------------------
+# Encaminhamento
+# ------------------------------------------------------------------------------------
+
+FWD_GMAIL = """---------- Forwarded message ---------
+From: LELLO CONDOMINIOS LTDA <seuboleto@lello.com.br>
+Date: Tue, Aug 25, 2026 at 7:04 PM
+Subject: O seu boleto chegou! - Ref. 10573 - Venc. 10/09/2026
+To: <gestao.btk@gmail.com>
+
+
+Olá, o seu boleto está disponível. Valor 415,11 vencimento 10/09/2026.
+"""
+
+
+def test_detecta_remetente_original_em_encaminhamento_do_gmail():
+    """Na caixa real do desafio TODAS as cobranças chegam como Fwd: da mesma pessoa.
+
+    Sem isto, o sistema atribuiria todos os boletos a um único "fornecedor" com domínio
+    gmail.com — e o casamento por fornecedor deixaria de existir.
+    """
+    fwd = detectar_encaminhamento(FWD_GMAIL)
+    assert fwd is not None
+    assert fwd.remetente == "seuboleto@lello.com.br"
+    assert fwd.remetente_nome == "LELLO CONDOMINIOS LTDA"
+    assert fwd.assunto == "O seu boleto chegou! - Ref. 10573 - Venc. 10/09/2026"
+
+
+def test_remetente_efetivo_e_dominio_usam_o_original():
+    e = parse_rfc822(
+        montar_email(
+            remetente="Gestao BTK <gestao.btk@gmail.com>",
+            assunto="Fwd: O seu boleto chegou!",
+            texto=FWD_GMAIL,
+        )
+    )
+    assert e.remetente == "gestao.btk@gmail.com"  # o header continua fiel ao que chegou
+    assert e.remetente_efetivo == "seuboleto@lello.com.br"
+    assert e.dominio_remetente == "lello.com.br"
+
+
+def test_assunto_efetivo_remove_prefixos_de_encaminhamento():
+    e = parse_rfc822(montar_email(assunto="Fwd: Re: Fwd: Boleto de agosto", texto="oi"))
+    assert e.assunto_efetivo == "Boleto de agosto"
+
+
+def test_encaminhamento_em_portugues():
+    corpo = (
+        "---------- Mensagem encaminhada ----------\n"
+        "De: Energia SA <faturas@energia.com.br>\n"
+        "Assunto: Sua fatura chegou\n"
+        "Para: <financeiro@empresa.com>\n\nSegue a fatura.\n"
+    )
+    fwd = detectar_encaminhamento(corpo)
+    assert fwd is not None
+    assert fwd.remetente == "faturas@energia.com.br"
+    assert fwd.assunto == "Sua fatura chegou"
+
+
+def test_encaminhamento_aninhado_pega_o_originador():
+    """Fwd de um Fwd: o último bloco é o fornecedor, o primeiro é quem repassou."""
+    corpo = (
+        "---------- Forwarded message ---------\n"
+        "From: Intermediario <meio@empresa.com>\n"
+        "Subject: Fwd: Boleto\n\n"
+        "---------- Forwarded message ---------\n"
+        "From: Fornecedor Real <cobranca@fornecedor.com.br>\n"
+        "Subject: Boleto\n\nSegue.\n"
+    )
+    fwd = detectar_encaminhamento(corpo)
+    assert fwd is not None
+    assert fwd.remetente == "cobranca@fornecedor.com.br"
+
+
+def test_email_normal_nao_e_tratado_como_encaminhamento():
+    e = parse_rfc822(montar_email(texto="Segue o boleto em anexo, atenciosamente."))
+    assert e.encaminhado is None
+    assert e.remetente_efetivo == e.remetente
+
+
+def test_from_solto_no_corpo_nao_vira_encaminhamento():
+    """Sem o marcador de bloco, um 'From:' qualquer no texto não é cabeçalho."""
+    assert detectar_encaminhamento("Veja: From: alguem@x.com escreveu isso ontem.") is None
+
+
+def test_triagem_avisa_que_e_encaminhamento():
+    """O classificador precisa saber, senão vê um e-mail pessoal e hesita."""
+    e = parse_rfc822(montar_email(assunto="Fwd: boleto", texto=FWD_GMAIL))
+    resumo = e.resumo_para_triagem()
+    assert "ENCAMINHAMENTO" in resumo
+    assert "seuboleto@lello.com.br" in resumo
 
 
 # ------------------------------------------------------------------------------------

@@ -181,7 +181,8 @@ class Pipeline:
             extraido = _documento_ilegivel(
                 f"o PDF {anexo.nome_arquivo!r} está protegido por senha e não pôde "
                 "ser lido automaticamente — abra manualmente (a senha costuma ser o "
-                "CPF/CNPJ do pagador) e preencha os campos"
+                "CPF/CNPJ do pagador) e preencha os campos",
+                email,
             )
             self.repo.registrar_passo(run_id, "extract", document_id=document_id)
         elif anexo is not None and anexo.e_xml:
@@ -284,17 +285,34 @@ class Pipeline:
         )
 
 
-def _documento_ilegivel(motivo: str) -> DocumentoExtraido:
+def _documento_ilegivel(motivo: str, email: EmailCapturado | None = None) -> DocumentoExtraido:
     """Um DocumentoExtraido vazio, com o motivo em `observacoes`.
 
-    Todo campo fica em branco com confiança 0 — a política de decisão então manda para
-    revisão por falta de valor e de vencimento, que é o comportamento correto quando
-    não há como ler o documento.
+    Quase todo campo fica em branco com confiança 0 — a política então manda para revisão
+    por falta de valor e de vencimento, que é o correto quando não há como ler o documento.
+
+    A exceção é o beneficiário: o nome de quem enviou o e-mail é evidência de quem está
+    cobrando. Fraca, e marcada como tal (confiança 0.3), mas melhor que deixar a linha da
+    fila sem nome nenhum — o revisor precisa saber de quem é a conta que ele vai abrir.
     """
     vazio = CampoTexto(valor=None, confianca=0.0)
+    remetente = (
+        (email.encaminhado.remetente_nome if email.encaminhado else email.remetente_nome)
+        if email
+        else None
+    )
+    beneficiario = (
+        CampoTexto(
+            valor=remetente,
+            confianca=0.3,
+            evidencia=f"nome do remetente do e-mail ({email.remetente_efetivo})" if email else None,
+        )
+        if remetente
+        else vazio
+    )
     return DocumentoExtraido(
         tipo_documento="boleto",
-        beneficiario=vazio,
+        beneficiario=beneficiario,
         cnpj=vazio,
         valor=CampoValor(valor_reais=None, confianca=0.0),
         vencimento=CampoData(data=None, confianca=0.0),

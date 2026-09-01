@@ -82,6 +82,15 @@ class Anexo:
 
 
 @dataclass(frozen=True)
+class Encaminhamento:
+    """O cabeçalho do e-mail original, recuperado de dentro de um encaminhamento."""
+
+    remetente: str
+    remetente_nome: str | None
+    assunto: str | None
+
+
+@dataclass(frozen=True)
 class EmailCapturado:
     message_id: str
     remetente: str
@@ -95,6 +104,7 @@ class EmailCapturado:
     corpo_html: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
     anexos: tuple[Anexo, ...] = ()
+    encaminhado: Encaminhamento | None = None
 
     @property
     def content_hash(self) -> str:
@@ -106,8 +116,27 @@ class EmailCapturado:
         return hashlib.sha256(self.raw).hexdigest()
 
     @property
+    def remetente_efetivo(self) -> str:
+        """Quem de fato mandou a cobrança.
+
+        Num e-mail encaminhado, o header `From` é de quem repassou — na caixa real do
+        desafio, todas as cobranças chegam como `Fwd:` de uma mesma pessoa. Usar esse
+        endereço para identificar fornecedor casaria todos os boletos com o encaminhador,
+        e o domínio (`gmail.com`) não diz nada. O remetente que importa está no bloco
+        encaminhado, dentro do corpo.
+        """
+        return self.encaminhado.remetente if self.encaminhado else self.remetente
+
+    @property
+    def assunto_efetivo(self) -> str:
+        """O assunto original, sem os prefixos `Fwd:` acumulados."""
+        if self.encaminhado and self.encaminhado.assunto:
+            return self.encaminhado.assunto
+        return _PREFIXO_ENCAMINHAMENTO.sub("", self.assunto).strip()
+
+    @property
     def dominio_remetente(self) -> str:
-        _, _, dominio = self.remetente.partition("@")
+        _, _, dominio = self.remetente_efetivo.partition("@")
         return dominio.lower()
 
     def resumo_para_triagem(self, limite_corpo: int = 4000) -> str:
@@ -123,14 +152,25 @@ class EmailCapturado:
         corpo = self.corpo_texto[:limite_corpo]
         if len(self.corpo_texto) > limite_corpo:
             corpo += f"\n[... truncado, {len(self.corpo_texto) - limite_corpo} caracteres a mais]"
-        return (
+
+        cabecalho = (
             f"De: {self.remetente_nome or ''} <{self.remetente}>\n"
             f"Para: {', '.join(self.destinatarios)}\n"
             f"Data: {self.recebido_em.isoformat()}\n"
             f"Assunto: {self.assunto}\n"
-            f"Anexos:\n{anexos}\n"
-            f"\n--- corpo ---\n{corpo}"
         )
+        if self.encaminhado:
+            # Deixar isso explícito importa: sem esta linha o classificador vê um e-mail
+            # pessoal do Gmail e hesita, quando na verdade a cobrança veio de um fornecedor.
+            cabecalho += (
+                f"\n[Este e-mail é um ENCAMINHAMENTO. O remetente original da cobrança é\n"
+                f" {self.encaminhado.remetente_nome or ''} "
+                f"<{self.encaminhado.remetente}>"
+                + (f", assunto original: {self.encaminhado.assunto!r}" if self.encaminhado.assunto else "")
+                + ".\n Considere o remetente original, não quem repassou.]\n"
+            )
+
+        return f"{cabecalho}Anexos:\n{anexos}\n\n--- corpo ---\n{corpo}"
 
 
 class MailSource(Protocol):
@@ -206,6 +246,76 @@ def html_para_texto(html: str) -> str:
     )
     texto = _ESPACOS.sub(" ", texto)
     return _LINHAS_VAZIAS.sub("\n\n", texto).strip()
+
+
+# --------------------------------------------------------------------------------------
+# Encaminhamento
+# --------------------------------------------------------------------------------------
+
+# Prefixos que os clientes de e-mail empilham no assunto ao encaminhar ou responder.
+_PREFIXO_ENCAMINHAMENTO = re.compile(r"^(?:\s*(?:fwd?|enc|re|res|encaminhada?)\s*:\s*)+", re.I)
+
+# Marcadores de início de bloco encaminhado. Gmail em inglês e em português, Outlook,
+# e a linha de sublinhados que alguns clientes usam.
+_MARCADOR_ENCAMINHAMENTO = re.compile(
+    r"^\s*(?:-{2,}\s*(?:forwarded message|mensagem encaminhada|original message|"
+    r"mensagem original)\s*-{2,}|_{10,})\s*$",
+    re.I | re.M,
+)
+
+# Dentro do bloco: "From: Nome <email>" ou "De: Nome <email>".
+_LINHA_FROM = re.compile(r"^\s*(?:from|de)\s*:\s*(.+)$", re.I | re.M)
+_LINHA_SUBJECT = re.compile(r"^\s*(?:subject|assunto)\s*:\s*(.+)$", re.I | re.M)
+
+# Endereço solto ou no formato "Nome <endereco@dominio>".
+_ENDERECO = re.compile(r"<\s*([^<>@\s]+@[^<>@\s]+)\s*>|([^<>@\s]+@[^<>@\s]+)")
+
+
+def detectar_encaminhamento(corpo: str) -> Encaminhamento | None:
+    """Recupera o cabeçalho original de dentro de um corpo encaminhado.
+
+    Na caixa real do desafio **todas** as cobranças chegam como `Fwd:` de uma mesma
+    pessoa, então sem isto o sistema atribuiria todos os boletos a um único "fornecedor"
+    com domínio `gmail.com`.
+
+    Se o e-mail foi encaminhado mais de uma vez, o corpo tem blocos aninhados: o primeiro
+    é o encaminhador intermediário e o último é o originador. Ficamos com o **último**,
+    que é o fornecedor de verdade nos dois casos.
+
+    O corpo é conteúdo não confiável, mas aqui só se lê metadado — nada do que estiver
+    escrito ali vira instrução.
+    """
+    if not corpo:
+        return None
+
+    marcadores = list(_MARCADOR_ENCAMINHAMENTO.finditer(corpo))
+    if not marcadores:
+        return None
+
+    # Só as ~15 linhas seguintes ao marcador: além disso já é corpo da mensagem, e um
+    # "From:" perdido no meio do texto não é cabeçalho.
+    inicio = marcadores[-1].end()
+    bloco = "\n".join(corpo[inicio:].splitlines()[:15])
+
+    achado_from = _LINHA_FROM.search(bloco)
+    if not achado_from:
+        return None
+
+    bruto = achado_from.group(1).strip()
+    endereco = _ENDERECO.search(bruto)
+    if not endereco:
+        return None
+    email = (endereco.group(1) or endereco.group(2)).strip().lower()
+
+    nome = bruto[: endereco.start()].strip().strip('"').strip("<").strip()
+    achado_assunto = _LINHA_SUBJECT.search(bloco)
+    assunto = achado_assunto.group(1).strip() if achado_assunto else None
+
+    return Encaminhamento(
+        remetente=email,
+        remetente_nome=nome or None,
+        assunto=_PREFIXO_ENCAMINHAMENTO.sub("", assunto).strip() if assunto else None,
+    )
 
 
 def _relevante(anexo: Anexo) -> bool:
@@ -294,4 +404,5 @@ def parse_rfc822(raw: bytes, *, message_id: str | None = None, thread_id: str | 
         },
         anexos=tuple(anexos),
         raw=raw,
+        encaminhado=detectar_encaminhamento(corpo_texto),
     )
