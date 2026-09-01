@@ -129,10 +129,18 @@ demonstração — ela tem um boleto onde o modelo lê R$ 987,00 e o código de 
 R$ 9.870,00:
 
 ```bash
-uv run billpoc semear && uv run billpoc run --somente-cache
+uv run billpoc semear && uv run billpoc run --fonte demo --somente-cache
 ```
 
 Abra a Norte Logística: os dois valores lado a lado, com o determinístico já gravado.
+
+**O aprendizado.** Na caixa de demonstração há quatro mensalidades do mesmo fornecedor
+(Limpeza Total). Abra a de setembro e mostre o campo **Recorrência**:
+
+> "As três primeiras saíram como 'único' com selo 🤖 — o modelo lê um documento isolado e
+> não tem como saber. A quarta virou 'recorrente' com selo 🔒 e a evidência 'três
+> cobranças anteriores em cadência mensal'. O sistema fica melhor com o uso, e não por
+> treinar nada: o histórico é determinístico."
 
 **Agenda.** Mostre o agrupamento por vencimento e o botão **Exportar → CNAB 240**.
 
@@ -160,10 +168,17 @@ conversa boa sobre onde calibrar.
 `PROMPT_VERSION`, o cache é invalidado, e `billpoc golden` mede se melhorou ou piorou.
 É a demonstração do ciclo de iteração.
 
-**c) Uma regra nova de validação** — `rules.py`, função `_politica`. Exemplo concreto que
-funciona bem ao vivo: *"alertar quando o valor foge mais de X% do histórico daquele
-fornecedor"*. A tabela `recurrence_groups` já existe com `valor_esperado_centavos` e
-`tolerancia_percentual`, então é ligar as pontas.
+**c) A tolerância do alerta de valor** — `apps/api/src/billpoc/enrich.py`:
+
+```python
+MINIMO_PARA_RECORRENCIA = 3
+TOLERANCIA_PADRAO = Decimal("15.0")
+```
+
+Baixar a tolerância para 2% faz aparecer alerta em variação normal de conta de consumo —
+boa conversa sobre onde fica o limite entre sinal e ruído. Ou uma **regra nova** em
+`rules.py`, função `_politica`: o padrão de `Verificacao` já está montado, é só
+acrescentar.
 
 ---
 
@@ -184,8 +199,8 @@ fornecedor"*. A tabela `recurrence_groups` já existe com `valor_esperado_centav
 ## Se algo der errado ao vivo
 
 - **API não responde** → `uv run billpoc doctor` mostra o que caiu.
-- **Sem chave da Anthropic / sem rede** → `uv run billpoc run --somente-cache` usa as
-  respostas já gravadas. A demo inteira funciona offline.
+- **Sem chave da Anthropic / sem rede** → `uv run billpoc run --fonte demo
+  --somente-cache` usa as respostas já gravadas. A demo inteira funciona offline.
 - **Banco sujo** → o `truncate` do começo deste arquivo.
 - **Quer resetar tudo** → `docker compose down -v && docker compose up -d && uv run
   billpoc initdb && uv run billpoc semear`.

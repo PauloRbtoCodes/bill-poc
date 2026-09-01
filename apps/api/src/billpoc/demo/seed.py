@@ -527,6 +527,71 @@ def _cenarios() -> list[Cenario]:
         )
     )
 
+    # ---- 8b. O histórico do mesmo fornecedor ---------------------------------------------
+    # Três meses anteriores da mesma mensalidade, para o enriquecimento ter o que aprender.
+    # Sem histórico, o sistema depende do palpite do modelo sobre recorrência; com ele, a
+    # cadência é um fato aritmético. É o cenário que mostra o produto ficando melhor com
+    # o uso, que é a curva que importa num produto que ganha clientes.
+    for indice, (mes, venc_hist) in enumerate(
+        [(6, date(2026, 6, 30)), (7, date(2026, 7, 30)), (8, date(2026, 8, 30))]
+    ):
+        valor_hist = Decimal("450.00")
+        ld_hist = linha_digitavel(
+            "033", venc_hist, valor_hist, f"90012345000678900001122{mes:02d}"
+        )
+        nome_mes = {6: "junho", 7: "julho", 8: "agosto"}[mes]
+        cenarios.append(
+            Cenario(
+                nome=f"historico-limpeza-{mes:02d}",
+                explicacao=(
+                    f"Mensalidade de {nome_mes} — histórico que faz o fornecedor virar "
+                    "recorrente por cadência, não por palpite"
+                    if indice == 2
+                    else f"Mensalidade de {nome_mes} do mesmo fornecedor"
+                ),
+                raw=montar_eml(
+                    de="contato@limpezatotal.com.br",
+                    nome="Limpeza Total ME",
+                    assunto=f"Cobranca mensal - {nome_mes}",
+                    corpo=(
+                        f"Bom dia!\n\nSegue o código do boleto de {nome_mes}:\n\n"
+                        f"{ld_hist}\n\n"
+                        f"Valor R$ {brl(valor_hist)}, "
+                        f"vencimento {venc_hist.strftime('%d/%m/%Y')}.\n\n"
+                        "Obrigado!\nLimpeza Total"
+                    ),
+                    quando=proximo(-90 + mes * 10),
+                ),
+                triagem=Triagem(
+                    e_conta_a_pagar=True,
+                    confianca=0.92,
+                    tipo_documento="boleto",
+                    justificativa="Cobrança mensal com linha digitável no corpo do e-mail.",
+                ),
+                extracao=DocumentoExtraido(
+                    tipo_documento="boleto",
+                    beneficiario=_campo("Limpeza Total ME", 0.82, "Limpeza Total"),
+                    cnpj=_nada(),
+                    valor=CampoValor(valor_reais="450.00", confianca=0.9,
+                                     evidencia="Valor R$ 450,00"),
+                    vencimento=CampoData(data=venc_hist.isoformat(), confianca=0.9,
+                                         evidencia=f"vencimento {venc_hist.strftime('%d/%m/%Y')}"),
+                    data_emissao=CampoData(data=None, confianca=0.0),
+                    linha_digitavel=_nada(),
+                    pix_copia_e_cola=_nada(),
+                    numero_nf=_nada(),
+                    chave_nfe=_nada(),
+                    categoria=CampoCategoria(categoria="SERVICOS_PJ", confianca=0.8,
+                                             justificativa="Serviço de limpeza terceirizado."),
+                    # O modelo chuta 'unico' aqui: sem histórico ele não tem como saber.
+                    # Quem corrige é o enriquecimento, e a origem vira 'historico'.
+                    recorrencia=CampoRecorrencia(recorrencia="unico", confianca=0.5,
+                                                 justificativa="Sem indício de recorrência no documento."),
+                    descricao=f"Limpeza — mensalidade {nome_mes}/2026",
+                ),
+            )
+        )
+
     # ---- 9. Foto de boleto ilegível ------------------------------------------------------
     cenarios.append(
         Cenario(

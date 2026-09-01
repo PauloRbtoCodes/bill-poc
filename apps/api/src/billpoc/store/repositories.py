@@ -29,6 +29,15 @@ from ..validate.rules import Conciliacao
 
 PIPELINE_VERSION = "0.1.0"
 
+# Provedores de e-mail pessoal. Um fornecedor que manda de um endereço desses não pode
+# ser casado pelo domínio — senão todos os fornecedores pequenos viram um só.
+DOMINIOS_PESSOAIS = frozenset({
+    "gmail.com", "googlemail.com", "hotmail.com", "hotmail.com.br", "outlook.com",
+    "outlook.com.br", "live.com", "msn.com", "yahoo.com", "yahoo.com.br", "bol.com.br",
+    "uol.com.br", "terra.com.br", "ig.com.br", "icloud.com", "me.com", "protonmail.com",
+    "zipmail.com.br", "globo.com", "r7.com",
+})
+
 
 @dataclass
 class Repositorio:
@@ -206,26 +215,58 @@ class Repositorio:
     # ---------------------------------------------------------------------------------
 
     def upsert_vendor(self, cnpj: str | None, razao_social: str, dominio: str) -> str | None:
-        """Cria ou atualiza o fornecedor. Sem CNPJ não cria — casaria errado por nome."""
-        if not cnpj:
+        """Cria ou casa o fornecedor, por CNPJ ou por domínio corporativo.
+
+        **Nunca por nome.** "ACME Ltda", "ACME LTDA." e "Acme Serviços" são a mesma
+        empresa e três strings diferentes — casar por nome cria duplicatas ou, pior,
+        funde fornecedores distintos com nomes parecidos.
+
+        O CNPJ é a chave forte. Quando não há CNPJ (fornecedor pequeno que manda o boleto
+        no corpo do e-mail, sem documento formal), o **domínio corporativo** do remetente
+        é uma chave fraca mas honesta: `contato@limpezatotal.com.br` identifica a Limpeza
+        Total tão bem quanto o CNPJ identificaria.
+
+        Domínio de e-mail pessoal não serve — casar por `gmail.com` fundiria todos os
+        fornecedores pequenos num só, que é exatamente o erro que se quer evitar.
+        """
+        if cnpj:
+            with self.conexao.cursor() as cur:
+                cur.execute(
+                    """
+                    insert into vendors (org_id, cnpj, razao_social, dominios_email)
+                    values (%s, %s, %s, %s)
+                    on conflict (org_id, cnpj) do update
+                        set razao_social = coalesce(nullif(vendors.razao_social, ''),
+                                                    excluded.razao_social),
+                            dominios_email = (
+                                select array_agg(distinct d)
+                                  from unnest(vendors.dominios_email ||
+                                              excluded.dominios_email) d
+                            ),
+                            atualizado_em = now()
+                    returning id
+                    """,
+                    (self.org_id, cnpj, razao_social or "(sem nome)", [dominio] if dominio else []),
+                )
+                return str(cur.fetchone()["id"])
+
+        if not dominio or dominio in DOMINIOS_PESSOAIS:
             return None
+
         with self.conexao.cursor() as cur:
+            cur.execute(
+                "select id from vendors where org_id=%s and %s = any(dominios_email) limit 1",
+                (self.org_id, dominio),
+            )
+            if linha := cur.fetchone():
+                return str(linha["id"])
+
             cur.execute(
                 """
                 insert into vendors (org_id, cnpj, razao_social, dominios_email)
-                values (%s, %s, %s, %s)
-                on conflict (org_id, cnpj) do update
-                    set razao_social = coalesce(nullif(vendors.razao_social, ''),
-                                                excluded.razao_social),
-                        dominios_email = (
-                            select array_agg(distinct d)
-                              from unnest(vendors.dominios_email ||
-                                          excluded.dominios_email) d
-                        ),
-                        atualizado_em = now()
-                returning id
+                values (%s, null, %s, %s) returning id
                 """,
-                (self.org_id, cnpj, razao_social or "(sem nome)", [dominio] if dominio else []),
+                (self.org_id, razao_social or dominio, [dominio]),
             )
             return str(cur.fetchone()["id"])
 

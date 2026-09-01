@@ -133,6 +133,7 @@ def montar_pipeline(repo, extrator) -> Pipeline:
         gmail_query="",
         mailbox="financeiro.test@gmail.com",
         fixtures_dir=__import__("pathlib").Path("fixtures"),
+        demo_dir=__import__("pathlib").Path("fixtures/demo"),
         cache_dir=__import__("pathlib").Path(".cache"),
         storage_dir=__import__("pathlib").Path("/tmp/billpoc-test-storage"),
         org_id=repo.org_id,

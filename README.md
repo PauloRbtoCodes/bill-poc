@@ -10,7 +10,7 @@ podem ser *conferidos*.
 ```bash
 docker compose up -d
 cd apps/api && uv run billpoc initdb && uv run billpoc semear
-uv run billpoc run --somente-cache        # roda sem nenhuma credencial
+uv run billpoc run --fonte demo --somente-cache   # roda sem nenhuma credencial
 ```
 
 ---
@@ -27,7 +27,7 @@ uv run billpoc initdb
 uv run billpoc semear
 
 # 3. Pipeline
-uv run billpoc run --somente-cache
+uv run billpoc run --fonte demo --somente-cache
 uv run billpoc report
 
 # 4. UI
@@ -166,6 +166,25 @@ Três caminhos de extração, em ordem de confiança:
 2. **Varredura da linha digitável** no texto do PDF ou do corpo — regex validado por DV.
    Ninguém transcreveu nada, então não há o que ter sido transcrito errado.
 3. **LLM** com o PDF como documento nativo — o resto.
+
+E, depois de tudo, o **histórico do fornecedor** ([`enrich.py`](apps/api/src/billpoc/enrich.py))
+sobrepõe o palpite do modelo onde ele não tem como saber:
+
+- **Categoria** confirmada por um humano vence a sugestão do LLM. Corrigir uma vez faz o
+  fornecedor inteiro entrar certo — o mecanismo de aprendizado mais simples que existe,
+  sem treino e sem prompt novo. Só decisão humana conta: se o palpite do modelo contasse,
+  um erro se propagaria para sempre ficando cada vez mais "confirmado".
+- **Recorrência** vira fato aritmético depois de três cobranças em cadência regular, com
+  origem `historico` e confiança 1.0. A detecção exige consistência, não só uma mediana
+  plausível: compras avulsas em 05/01, 19/01, 02/06 e 30/06 têm mediana de 28 dias e
+  seriam declaradas "mensais" por um algoritmo ingênuo.
+- **Valor fora do padrão** alerta sem bloquear. "Esse aluguel veio R$ 400 mais caro" é a
+  pergunta que um analista financeiro humano faria.
+
+O fornecedor é casado por **CNPJ**, ou pelo **domínio corporativo** do remetente quando
+não há CNPJ — nunca por nome, porque "ACME Ltda" e "ACME LTDA." são a mesma empresa e
+duas strings. Domínio de e-mail pessoal não conta: casar por `gmail.com` fundiria todos
+os fornecedores pequenos num só.
 
 ### A política de decisão
 
@@ -422,6 +441,7 @@ apps/api/src/billpoc/
   ingest/       MailSource: parser RFC822 compartilhado por .eml e Gmail API
   store/        SQL direto, sem ORM
   demo/         gerador da caixa de demonstração (inclui um gerador de PDF)
+  enrich.py     aprendizado pelo histórico do fornecedor
   pipeline.py   as seis etapas
   exportar.py   CNAB 240, CSV e layout de ERP
   api.py        HTTP para a UI

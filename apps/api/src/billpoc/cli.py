@@ -162,7 +162,7 @@ def semear() -> None:
     from .demo.seed import semear as gerar
 
     cfg = _cfg()
-    cenarios = gerar(cfg.fixtures_dir, cfg.cache_dir, cfg.modelo_triagem, cfg.modelo_extracao)
+    cenarios = gerar(cfg.demo_dir, cfg.cache_dir, cfg.modelo_triagem, cfg.modelo_extracao)
 
     tabela = Table("#", "Cenário", "O que demonstra", title="Caixa de demonstração",
                    title_justify="left")
@@ -170,8 +170,8 @@ def semear() -> None:
         tabela.add_row(str(i), c.nome, c.explicacao or "—")
     console.print(tabela)
     console.print(
-        f"\n[green]{len(cenarios)} e-mail(s)[/] em {cfg.fixtures_dir}\n"
-        "Agora: [bold]billpoc run --somente-cache[/]"
+        f"\n[green]{len(cenarios)} e-mail(s)[/] em {cfg.demo_dir}\n"
+        "Agora: [bold]billpoc run --fonte demo --somente-cache[/]"
     )
 
 
@@ -200,7 +200,9 @@ def initdb() -> None:
 
 @app.command()
 def run(
-    fonte: str = typer.Option("eml", help="'eml' (fixtures) ou 'gmail' (ao vivo)."),
+    fonte: str = typer.Option(
+        "eml", help="'eml' (caixa real), 'demo' (cenários gerados) ou 'gmail' (ao vivo)."
+    ),
     limite: int | None = typer.Option(None, help="Máximo de e-mails a processar."),
     somente_cache: bool = typer.Option(
         False, "--somente-cache", help="Não chama a API; usa só respostas já gravadas."
@@ -211,11 +213,13 @@ def run(
     logging.basicConfig(level=logging.INFO if verboso else logging.WARNING, format="%(message)s")
     cfg = _cfg()
 
-    origem = (
-        EmlSource(cfg.fixtures_dir)
-        if fonte == "eml"
-        else GmailSource(cfg.gmail_credentials, cfg.gmail_token, cfg.gmail_query)
-    )
+    origem = {
+        "eml": lambda: EmlSource(cfg.fixtures_dir),
+        "demo": lambda: EmlSource(cfg.demo_dir),
+    }.get(
+        fonte,
+        lambda: GmailSource(cfg.gmail_credentials, cfg.gmail_token, cfg.gmail_query),
+    )()
     extrator = Extrator(
         modelo_triagem=cfg.modelo_triagem,
         modelo_extracao=cfg.modelo_extracao,

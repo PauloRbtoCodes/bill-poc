@@ -44,6 +44,7 @@ class Config:
 
     # --- caminhos ---
     fixtures_dir: Path
+    demo_dir: Path
     cache_dir: Path
     storage_dir: Path
 
@@ -91,6 +92,7 @@ def carregar() -> Config:
         gmail_query=os.getenv("GMAIL_QUERY", ""),
         mailbox=os.getenv("MAILBOX", "financeiro.test@gmail.com"),
         fixtures_dir=_caminho("FIXTURES_DIR", RAIZ / "fixtures"),
+        demo_dir=_caminho("DEMO_DIR", RAIZ / "fixtures" / "demo"),
         cache_dir=_caminho("CACHE_DIR", RAIZ / ".cache" / "llm"),
         storage_dir=_caminho("STORAGE_DIR", RAIZ / ".storage"),
         org_id=os.getenv("ORG_ID", ORG_DEMO),
