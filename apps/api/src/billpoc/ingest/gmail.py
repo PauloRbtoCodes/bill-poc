@@ -32,6 +32,7 @@ from .base import EmailCapturado, parse_rfc822
 ESCOPOS = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
+TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 
 class GmailSource:
@@ -49,6 +50,8 @@ class GmailSource:
         self.token_path = Path(token_path)
         # Query no dialeto de busca do Gmail. Vazia = caixa inteira.
         self.query = query
+        # Access token renovado uma vez por instância, não por chamada.
+        self._token: str | None = None
 
     # ---------------------------------------------------------------------------------
     # Autenticação
@@ -77,36 +80,62 @@ class GmailSource:
         credenciais = fluxo.run_local_server(port=0)
         self.token_path.write_text(credenciais.to_json())
 
-    def _credenciais(self):
-        """Carrega o token, do arquivo local ou da variável de ambiente.
+    def _renovar(self, token: dict) -> str:
+        """Troca o refresh token por um access token novo.
+
+        Feito por HTTP direto em vez de `google.auth.transport.requests`, que arrasta a
+        biblioteca `requests` inteira. Ela vinha de carona no `google-api-python-client`;
+        quando removi aquele pacote, o import continuou funcionando **localmente**
+        (`requests` seguia instalado no venv) e quebrou só em produção, onde o ambiente é
+        montado do zero pelo requirements. É o tipo de dependência transitiva que passa
+        despercebida justamente por ainda estar na máquina de quem desenvolve.
+
+        O endpoint é o OAuth2 padrão do Google e a troca é um POST de formulário.
+        """
+        corpo = urlencode({
+            "client_id": token["client_id"],
+            "client_secret": token["client_secret"],
+            "refresh_token": token["refresh_token"],
+            "grant_type": "refresh_token",
+        }).encode()
+
+        requisicao = Request(
+            TOKEN_URI,
+            data=corpo,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        try:
+            with urlopen(requisicao, timeout=30) as resposta:
+                return json.loads(resposta.read())["access_token"]
+        except HTTPError as exc:
+            detalhe = exc.read().decode("utf-8", errors="replace")[:300]
+            raise RuntimeError(
+                f"falha ao renovar o token do Gmail ({exc.code}): {detalhe}. "
+                "O refresh token pode ter sido revogado — rode `billpoc auth` de novo."
+            ) from exc
+
+    def _access_token(self) -> str:
+        """Devolve um access token válido, do arquivo local ou da variável de ambiente.
 
         Em deploy serverless não há disco persistente para guardar `token.json`, então o
         conteúdo dele vai como secret em `GMAIL_TOKEN_JSON`. O refresh acontece em
-        memória: o token de acesso dura uma hora e é renovado a cada invocação fria, o
-        que é aceitável. O que **não** pode acontecer é o refresh token se perder — por
-        isso ele vem do secret e não de um arquivo que o host apaga.
+        memória a cada invocação fria: o access token dura uma hora e é barato de
+        renovar. O que **não** pode se perder é o refresh token — por isso ele vem do
+        secret, e não de um arquivo que o host apaga entre execuções.
         """
-        import json
-
-        from google.auth.transport.requests import Request
-        from google.oauth2.credentials import Credentials
-
         if bruto := os.getenv("GMAIL_TOKEN_JSON"):
-            credenciais = Credentials.from_authorized_user_info(json.loads(bruto), ESCOPOS)
-            if credenciais.expired and credenciais.refresh_token:
-                credenciais.refresh(Request())
-            return credenciais
+            return self._renovar(json.loads(bruto))
 
         if not self.token_path.exists():
             raise RuntimeError(
                 "não autorizado — rode `billpoc auth`, ou defina GMAIL_TOKEN_JSON"
             )
 
-        credenciais = Credentials.from_authorized_user_file(str(self.token_path), ESCOPOS)
-        if credenciais.expired and credenciais.refresh_token:
-            credenciais.refresh(Request())
-            self.token_path.write_text(credenciais.to_json())
-        return credenciais
+        token = json.loads(self.token_path.read_text())
+        acesso = self._renovar(token)
+        # Guarda o access token novo para o próximo processo aproveitar.
+        self.token_path.write_text(json.dumps({**token, "token": acesso}))
+        return acesso
 
     def _get(self, caminho: str, **parametros) -> dict:
         """Chamada autenticada à API do Gmail.
@@ -117,14 +146,17 @@ class GmailSource:
         caber e não caber no limite do pacote, e em qualquer lugar é cold start mais
         lento sem contrapartida.
 
-        A autenticação continua na `google-auth`, que é pequena e sabe renovar o token
-        corretamente. O que se descarta é só a camada de descoberta.
+        O access token é renovado uma vez por instância, não a cada chamada: uma
+        sincronização que percorre a caixa faz dezenas de requisições, e renovar em todas
+        seria uma ida a mais ao Google por e-mail processado.
         """
-        credenciais = self._credenciais()
+        if self._token is None:
+            self._token = self._access_token()
+
         query = urlencode({k: v for k, v in parametros.items() if v is not None})
         url = f"{API_BASE}/{caminho}" + (f"?{query}" if query else "")
 
-        requisicao = Request(url, headers={"Authorization": f"Bearer {credenciais.token}"})
+        requisicao = Request(url, headers={"Authorization": f"Bearer {self._token}"})
         try:
             with urlopen(requisicao, timeout=30) as resposta:
                 return json.loads(resposta.read())
