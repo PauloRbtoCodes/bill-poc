@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap">
+  <style>
+    /* Sem isto, o container interno soma `height: 100%` com o próprio padding e passa
+       de 810 para 944px — a moldura corta 134px de conteúdo pelo rodapé, e o corte só
+       aparece na exportação. */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #c4c0ff; } a:hover { color: #fafffd; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #1b135c; font-family: Inter, system-ui, sans-serif; color: #fafffd;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(62% 80% at 82% 10%, rgba(75,57,239,.5), transparent 62%);"></div>
+
+  <div style="position: relative; height: 100%; display: flex; flex-direction: column; padding: 70px 96px 64px;">
+
+    <p style="margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: rgba(196,192,255,.75);">Rodou sobre a caixa real</p>
+    <h2 style="margin: 0 0 40px; font-family: Outfit, sans-serif; font-size: 54px; font-weight: 600; line-height: 62px; letter-spacing: -.025em;">
+      Não é demo com dado fabricado
+    </h2>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px;">
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 30px 28px;">
+        <p style="margin: 0 0 8px; font-family: Outfit, sans-serif; font-size: 56px; font-weight: 700; letter-spacing: -.035em; line-height: 1;">48</p>
+        <p style="margin: 0; font-size: 15px; color: rgba(250,255,253,.6);">e-mails processados</p>
+      </div>
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 30px 28px;">
+        <p style="margin: 0 0 8px; font-family: Outfit, sans-serif; font-size: 56px; font-weight: 700; letter-spacing: -.035em; line-height: 1;">88<span style="font-size: 32px;">%</span></p>
+        <p style="margin: 0; font-size: 15px; color: rgba(250,255,253,.6);">ruído descartado</p>
+      </div>
+      <div style="background: linear-gradient(150deg, rgba(75,57,239,.45), rgba(114,125,228,.2)); border: 1px solid rgba(196,192,255,.4); border-radius: 14px; padding: 30px 28px;">
+        <p style="margin: 0 0 8px; font-family: Outfit, sans-serif; font-size: 56px; font-weight: 700; letter-spacing: -.035em; line-height: 1;">0</p>
+        <p style="margin: 0; font-size: 15px; color: rgba(250,255,253,.78);">erros</p>
+      </div>
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 30px 28px;">
+        <p style="margin: 0 0 8px; font-family: Outfit, sans-serif; font-size: 56px; font-weight: 700; letter-spacing: -.035em; line-height: 1;"><span style="font-size: 30px;">US$</span>&nbsp;0,36</p>
+        <p style="margin: 0; font-size: 15px; color: rgba(250,255,253,.6);">custo total</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 26px; margin-top: 26px; flex-grow: 1;">
+
+      <div style="background: rgba(10,8,32,.55); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 32px 34px;">
+        <p style="margin: 0 0 22px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(196,192,255,.8);">Acurácia no conjunto rotulado</p>
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between;"><span style="font-size: 17px; color: rgba(250,255,253,.72);">Triagem</span><span style="font-family: Outfit, sans-serif; font-size: 24px; font-weight: 600; color: #c4c0ff;">16 / 16</span></div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;"><span style="font-size: 17px; color: rgba(250,255,253,.72);">Valor</span><span style="font-family: Outfit, sans-serif; font-size: 24px; font-weight: 600; color: #c4c0ff;">4 / 4</span></div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;"><span style="font-size: 17px; color: rgba(250,255,253,.72);">Vencimento</span><span style="font-family: Outfit, sans-serif; font-size: 24px; font-weight: 600; color: #c4c0ff;">5 / 5</span></div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.1);"><span style="font-size: 17px;">Cobranças perdidas</span><span style="font-family: Outfit, sans-serif; font-size: 24px; font-weight: 600;">nenhuma</span></div>
+        </div>
+      </div>
+
+      <div style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 32px 34px;">
+        <p style="margin: 0 0 22px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(196,192,255,.8);">O que só a caixa real ensinou</p>
+        <div style="display: flex; flex-direction: column; gap: 17px;">
+          <p style="margin: 0; font-size: 16px; line-height: 25px; color: rgba(250,255,253,.78);"><span style="color:#fafffd; font-weight:500;">Todas as cobranças chegam encaminhadas</span> da mesma pessoa — o remetente real está no corpo</p>
+          <p style="margin: 0; font-size: 16px; line-height: 25px; color: rgba(250,255,253,.78);"><span style="color:#fafffd; font-weight:500;">Dois dos seis PDFs vêm com senha.</span> Num deles a linha digitável estava no corpo, e a varredura resolveu</p>
+          <p style="margin: 0; font-size: 16px; line-height: 25px; color: rgba(250,255,253,.78);"><span style="color:#fafffd; font-weight:500;">O mesmo provedor com dois nomes</span> — por isso o casamento é por CNPJ, nunca por nome</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <p style="position: absolute; right: 44px; bottom: 30px; margin: 0; font-family: Outfit, sans-serif; font-size: 14px; color: rgba(250,255,253,.28);">09</p>
+</div>
+</x-dc>
+</body>
+</html>

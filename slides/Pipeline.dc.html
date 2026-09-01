@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap">
+  <style>
+    /* Sem isto, o container interno soma `height: 100%` com o próprio padding e passa
+       de 810 para 944px — a moldura corta 134px de conteúdo pelo rodapé, e o corte só
+       aparece na exportação. */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #c4c0ff; } a:hover { color: #fafffd; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #1b135c; font-family: Inter, system-ui, sans-serif; color: #fafffd;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(60% 76% at 14% 92%, rgba(75,57,239,.42), transparent 62%);"></div>
+
+  <div style="position: relative; height: 100%; display: flex; flex-direction: column; padding: 70px 96px 64px;">
+
+    <p style="margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: rgba(196,192,255,.75);">Entregável 2 — a POC</p>
+    <h2 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 54px; font-weight: 600; line-height: 62px; letter-spacing: -.025em;">
+      Seis etapas, e a ordem importa
+    </h2>
+    <p style="margin: 0 0 44px; font-size: 19px; line-height: 28px; color: rgba(250,255,253,.62); max-width: 900px;">
+      A triagem vem antes da extração porque abrir PDF no modelo caro é o item mais caro do fluxo — e caixa real é majoritariamente ruído.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; flex-grow: 1;">
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 26px 22px; display: flex; flex-direction: column;">
+        <p style="margin: 0 0 16px; font-family: Outfit, sans-serif; font-size: 30px; font-weight: 600; color: rgba(196,192,255,.42);">01</p>
+        <h3 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -.015em;">Captura</h3>
+        <p style="margin: 0; font-size: 14px; line-height: 21px; color: rgba(250,255,253,.62);">Gmail API. Idempotente: rodar de novo não duplica.</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 26px 22px; display: flex; flex-direction: column;">
+        <p style="margin: 0 0 16px; font-family: Outfit, sans-serif; font-size: 30px; font-weight: 600; color: rgba(196,192,255,.42);">02</p>
+        <h3 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -.015em;">Triagem</h3>
+        <p style="margin: 0 0 14px; font-size: 14px; line-height: 21px; color: rgba(250,255,253,.62);">Modelo barato, sem abrir PDF.</p>
+        <span style="margin-top: auto; align-self: flex-start; padding: 5px 12px; border-radius: 999px; background: rgba(196,192,255,.16); font-size: 12px; font-weight: 500; color: #c4c0ff;">Haiku</span>
+      </div>
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 26px 22px; display: flex; flex-direction: column;">
+        <p style="margin: 0 0 16px; font-family: Outfit, sans-serif; font-size: 30px; font-weight: 600; color: rgba(196,192,255,.42);">03</p>
+        <h3 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -.015em;">Extração</h3>
+        <p style="margin: 0 0 14px; font-size: 14px; line-height: 21px; color: rgba(250,255,253,.62);">Só no que passou. Cada campo com evidência.</p>
+        <span style="margin-top: auto; align-self: flex-start; padding: 5px 12px; border-radius: 999px; background: rgba(196,192,255,.16); font-size: 12px; font-weight: 500; color: #c4c0ff;">Opus</span>
+      </div>
+
+      <div style="background: linear-gradient(160deg, rgba(75,57,239,.45), rgba(114,125,228,.18)); border: 1px solid rgba(196,192,255,.4); border-radius: 14px; padding: 26px 22px; display: flex; flex-direction: column;">
+        <p style="margin: 0 0 16px; font-family: Outfit, sans-serif; font-size: 30px; font-weight: 600; color: rgba(250,255,253,.6);">04</p>
+        <h3 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -.015em;">Validação</h3>
+        <p style="margin: 0; font-size: 14px; line-height: 21px; color: rgba(250,255,253,.86);">A aritmética confere. Divergência vai para revisão.</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 26px 22px; display: flex; flex-direction: column;">
+        <p style="margin: 0 0 16px; font-family: Outfit, sans-serif; font-size: 30px; font-weight: 600; color: rgba(196,192,255,.42);">05</p>
+        <h3 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -.015em;">Histórico</h3>
+        <p style="margin: 0; font-size: 14px; line-height: 21px; color: rgba(250,255,253,.62);">Recorrência e categoria vêm do que já se sabe.</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 26px 22px; display: flex; flex-direction: column;">
+        <p style="margin: 0 0 16px; font-family: Outfit, sans-serif; font-size: 30px; font-weight: 600; color: rgba(196,192,255,.42);">06</p>
+        <h3 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -.015em;">Gravação</h3>
+        <p style="margin: 0; font-size: 14px; line-height: 21px; color: rgba(250,255,253,.62);">Conta e auditoria na mesma transação.</p>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 30px; display: flex; gap: 44px; padding: 24px 30px; border-radius: 14px; background: rgba(10,8,32,.5); border: 1px solid rgba(255,255,255,.09);">
+      <div>
+        <p style="margin: 0 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(196,192,255,.7);">Três caminhos de extração</p>
+        <p style="margin: 0; font-size: 16px; line-height: 25px; color: rgba(250,255,253,.78);">
+          <span style="color:#fafffd; font-weight:500;">1.</span> XML da NF-e, sem LLM &nbsp;·&nbsp;
+          <span style="color:#fafffd; font-weight:500;">2.</span> Varredura da linha digitável no texto, validada por DV &nbsp;·&nbsp;
+          <span style="color:#fafffd; font-weight:500;">3.</span> LLM com o PDF nativo
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="position: absolute; right: 44px; bottom: 30px; margin: 0; font-family: Outfit, sans-serif; font-size: 14px; color: rgba(250,255,253,.28);">05</p>
+</div>
+</x-dc>
+</body>
+</html>

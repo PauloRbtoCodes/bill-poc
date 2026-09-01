@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    /* Sem isto, o container interno soma `height: 100%` com o próprio padding e passa
+       de 810 para 944px — a moldura corta 134px de conteúdo pelo rodapé, e o corte só
+       aparece na exportação. */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #c4c0ff; } a:hover { color: #fafffd; }
+    .t { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #1b135c; font-family: Inter, system-ui, sans-serif; color: #fafffd;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(58% 74% at 12% 10%, rgba(75,57,239,.44), transparent 62%);"></div>
+
+  <div style="position: relative; height: 100%; display: flex; flex-direction: column; padding: 70px 96px 64px;">
+
+    <p style="margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: rgba(196,192,255,.75);">Entregável 3 — modelo de dados</p>
+    <h2 style="margin: 0 0 12px; font-family: Outfit, sans-serif; font-size: 54px; font-weight: 600; line-height: 62px; letter-spacing: -.025em;">
+      Dois mundos, perguntas diferentes
+    </h2>
+    <p style="margin: 0 0 40px; font-size: 19px; line-height: 28px; color: rgba(250,255,253,.62); max-width: 940px;">
+      O payable vira "pago" e some da tela. A trilha de como aquele valor foi parar ali precisa sobreviver.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; flex-grow: 1;">
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.11); border-radius: 16px; padding: 34px 36px;">
+        <p style="margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(196,192,255,.8);">Mundo ERP · mutável</p>
+        <h3 style="margin: 0 0 26px; font-family: Outfit, sans-serif; font-size: 25px; font-weight: 600; letter-spacing: -.02em;">"O que eu tenho a pagar?"</h3>
+
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#c4c0ff; width: 200px; flex-shrink: 0;">payables</span><span style="font-size: 15px; color: rgba(250,255,253,.68);">o registro central</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#c4c0ff; width: 200px; flex-shrink: 0;">vendors</span><span style="font-size: 15px; color: rgba(250,255,253,.68);">fornecedor, por CNPJ</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#c4c0ff; width: 200px; flex-shrink: 0;">payment_instruments</span><span style="font-size: 15px; color: rgba(250,255,253,.68);">linha digitável, Pix</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#c4c0ff; width: 200px; flex-shrink: 0;">payment_schedules</span><span style="font-size: 15px; color: rgba(250,255,253,.68);">o agendamento no banco</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#c4c0ff; width: 200px; flex-shrink: 0;">recurrence_groups</span><span style="font-size: 15px; color: rgba(250,255,253,.68);">cadência e valor esperado</span></div>
+        </div>
+      </div>
+
+      <div style="background: linear-gradient(160deg, rgba(75,57,239,.32), rgba(114,125,228,.14)); border: 1px solid rgba(196,192,255,.34); border-radius: 16px; padding: 34px 36px;">
+        <p style="margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(250,255,253,.75);">Mundo auditoria · append-only</p>
+        <h3 style="margin: 0 0 26px; font-family: Outfit, sans-serif; font-size: 25px; font-weight: 600; letter-spacing: -.02em;">"Por que o sistema acha isso?"</h3>
+
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#fafffd; width: 200px; flex-shrink: 0;">email_messages</span><span style="font-size: 15px; color: rgba(250,255,253,.72);">o e-mail que chegou</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#fafffd; width: 200px; flex-shrink: 0;">processing_steps</span><span style="font-size: 15px; color: rgba(250,255,253,.72);">custo, tokens, prompt_version</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#fafffd; width: 200px; flex-shrink: 0;">classifications</span><span style="font-size: 15px; color: rgba(250,255,253,.72);">a triagem, inclusive do ruído</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#fafffd; width: 200px; flex-shrink: 0; font-weight: 500;">field_extractions</span><span style="font-size: 15px; color: #c4c0ff; font-weight: 500;">a espinha dorsal</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#fafffd; width: 200px; flex-shrink: 0;">validation_results</span><span style="font-size: 15px; color: rgba(250,255,253,.72);">esperado × encontrado</span></div>
+          <div style="display: flex; gap: 16px;"><span class="t" style="color:#fafffd; width: 200px; flex-shrink: 0;">review_actions</span><span style="font-size: 15px; color: rgba(250,255,253,.72);">quem mudou o quê</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 28px; padding: 24px 30px; border-radius: 14px; background: rgba(10,8,32,.5); border: 1px solid rgba(255,255,255,.09);">
+      <p style="margin: 0; font-size: 18px; line-height: 27px;">
+        <span class="t" style="font-size: 16px; color: #c4c0ff;">field_extractions</span>
+        <span style="color: rgba(250,255,253,.72);"> responde, para qualquer número na tela: <span style="color:#fafffd; font-weight:500;">de onde veio, com que confiança, e qual trecho do documento sustenta</span>. É o que distingue um valor conferido de um valor lido — e é a distinção que a UI inteira usa.</span>
+      </p>
+    </div>
+
+  </div>
+
+  <p style="position: absolute; right: 44px; bottom: 30px; margin: 0; font-family: Outfit, sans-serif; font-size: 14px; color: rgba(250,255,253,.28);">07</p>
+</div>
+</x-dc>
+</body>
+</html>

@@ -57,7 +57,7 @@ Não é só uma demo com dados fabricados — o pipeline processou os **48 e-mai
 
 | | |
 |---|---|
-| Ruído descartado | **42 (87%)** — alertas do Google, verificações de conta, e-mails de teste de outro candidato |
+| Ruído descartado | **42 (88%)** — alertas do Google, verificações de conta, e-mails de teste de outro candidato |
 | Cobranças identificadas | **6** — LELLO Condomínios, Enel, Lord Fibra, Starfiber, MAC Ibirapuera |
 | Erros | **0** |
 | Custo | **US$ 0,36** |
@@ -128,7 +128,7 @@ Numa linha digitável de 47 dígitos:
 
 - **posições 34–37** — fator de vencimento: dias corridos desde 07/10/1997
 - **posições 38–47** — valor em centavos
-- **cinco dígitos verificadores** — três mod 10 (um por campo) e um mod 11 geral
+- **quatro dígitos verificadores** — três mod 10 (um por campo) e um mod 11 geral
 
 Então valor e vencimento saem de aritmética, e os DVs provam que a própria linha não foi
 lida errado. O mesmo vale para os outros campos:

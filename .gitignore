@@ -42,3 +42,6 @@ out/
 
 # Vercel
 .vercel
+
+# HTML intermediário da montagem do PDF dos slides (regerável com montar-pdf.mjs)
+slides/slides-impressao.html

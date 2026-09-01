@@ -1,0 +1,25 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",           "x": 0,    "y": 0,    "w": 1440, "h": 810, "title": "01 · Capa" },
+    { "file": "Problema.dc.html",       "x": 1560, "y": 0,    "w": 1440, "h": 810, "title": "02 · O problema" },
+    { "file": "Tese.dc.html",           "x": 3120, "y": 0,    "w": 1440, "h": 810, "title": "03 · A tese" },
+    { "file": "Abordagens.dc.html",     "x": 0,    "y": 960,  "w": 1440, "h": 810, "title": "04 · Três abordagens" },
+    { "file": "Pipeline.dc.html",       "x": 1560, "y": 960,  "w": 1440, "h": 810, "title": "05 · O pipeline" },
+    { "file": "Incerteza.dc.html",      "x": 3120, "y": 960,  "w": 1440, "h": 810, "title": "06 · A incerteza" },
+    { "file": "Dados.dc.html",          "x": 0,    "y": 1920, "w": 1440, "h": 810, "title": "07 · Modelo de dados" },
+    { "file": "FinancePartner.dc.html", "x": 1560, "y": 1920, "w": 1440, "h": 810, "title": "08 · Finance Partner" },
+    { "file": "Resultado.dc.html",      "x": 3120, "y": 1920, "w": 1440, "h": 810, "title": "09 · Resultado real" },
+    { "file": "Limites.dc.html",        "x": 0,    "y": 2880, "w": 1440, "h": 810, "title": "10 · Limites e próximos" },
+    { "file": "TesteAoVivo.dc.html",    "x": 1560, "y": 2880, "w": 1440, "h": 810, "title": "11 · Teste ao vivo" }
+  ],
+  "annotations": [
+    {
+      "id": "ordem",
+      "x": 3120,
+      "y": 2920,
+      "w": 380,
+      "text": "Ordem de apresentação: da esquerda para a direita, linha a linha.\n\nOs slides 01-03 montam a tese; 04-08 são os entregáveis; 09 prova em dado real; 11 abre a demo ao vivo."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

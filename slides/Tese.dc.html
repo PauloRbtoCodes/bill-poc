@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+  <style>
+    /* Sem isto, o container interno soma `height: 100%` com o próprio padding e passa
+       de 810 para 944px — a moldura corta 134px de conteúdo pelo rodapé, e o corte só
+       aparece na exportação. */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #c4c0ff; } a:hover { color: #fafffd; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #1b135c; font-family: Inter, system-ui, sans-serif; color: #fafffd;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 82% at 20% 8%, rgba(75,57,239,.55), transparent 60%);"></div>
+
+  <div style="position: relative; height: 100%; display: flex; flex-direction: column; padding: 70px 96px 64px;">
+
+    <p style="margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: rgba(196,192,255,.75);">A tese</p>
+    <h2 style="margin: 0 0 40px; font-family: Outfit, sans-serif; font-size: 54px; font-weight: 600; line-height: 62px; letter-spacing: -.025em; max-width: 1080px;">
+      Valor e vencimento não precisam ser lidos
+    </h2>
+
+    <div style="background: rgba(10,8,32,.62); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 40px 44px; backdrop-filter: blur(20px);">
+      <p style="margin: 0 0 26px; font-size: 17px; color: rgba(250,255,253,.62);">Eles estão aritmeticamente codificados na própria linha digitável.</p>
+
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 25px; letter-spacing: .01em; white-space: nowrap;">
+        <span style="color: rgba(250,255,253,.42);">34191.79001&nbsp; 01043.510047&nbsp; 91020.150008&nbsp; 1&nbsp;&nbsp;</span><span style="color: #c4c0ff; font-weight: 600; border-bottom: 2px solid #4b39ef; padding-bottom: 3px;">1570</span><span style="color: #ffb59b; font-weight: 600; border-bottom: 2px solid #a53600; padding-bottom: 3px;">0000123456</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; margin-top: 34px;">
+        <div>
+          <p style="margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #c4c0ff;">Fator de vencimento</p>
+          <p style="margin: 0; font-size: 17px; line-height: 26px; color: rgba(250,255,253,.72);">Fator 1570 desde a data-base → <span style="color:#fafffd; font-weight:500;">15/09/2026</span></p>
+        </div>
+        <div>
+          <p style="margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #ffb59b;">Valor em centavos</p>
+          <p style="margin: 0; font-size: 17px; line-height: 26px; color: rgba(250,255,253,.72);">123456 centavos → <span style="color:#fafffd; font-weight:500;">R$ 1.234,56</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 30px; flex-grow: 1;">
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 28px 30px; display: flex; flex-direction: column; gap: 12px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="10.5" width="16" height="10" rx="2.2" stroke="#c4c0ff" stroke-width="1.7"/>
+          <path d="M8 10.5V7.4a4 4 0 0 1 8 0v3.1" stroke="#c4c0ff" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <p style="margin: 0; font-size: 17px; line-height: 25px; color: rgba(250,255,253,.78);"><span style="color:#fafffd; font-weight:500;">Quatro dígitos verificadores</span> — três mod 10 e um mod 11 geral — provam que a linha não foi transcrita errada</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 28px 30px; display: flex; flex-direction: column; gap: 12px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <path d="M4 12.6 8.4 17 20 5.4" stroke="#c4c0ff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p style="margin: 0; font-size: 17px; line-height: 25px; color: rgba(250,255,253,.78);">O mesmo vale para <span style="color:#fafffd; font-weight:500;">CNPJ, chave da NF-e e Pix</span> — todos têm verificação própria</p>
+      </div>
+
+      <div style="background: linear-gradient(140deg, rgba(75,57,239,.4), rgba(114,125,228,.22)); border: 1px solid rgba(196,192,255,.32); border-radius: 14px; padding: 28px 30px; display: flex; flex-direction: column; gap: 12px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3v18M3 12h18" stroke="#fafffd" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <p style="margin: 0; font-size: 17px; line-height: 25px;"><span style="font-weight: 600;">O LLM lê. A aritmética confere.</span> Se discordam, ninguém decide sozinho.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <p style="position: absolute; right: 44px; bottom: 30px; margin: 0; font-family: Outfit, sans-serif; font-size: 14px; color: rgba(250,255,253,.28);">03</p>
+</div>
+</x-dc>
+</body>
+</html>

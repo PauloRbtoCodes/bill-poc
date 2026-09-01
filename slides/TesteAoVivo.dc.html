@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap">
+  <style>
+    /* Sem isto, o container interno soma `height: 100%` com o próprio padding e passa
+       de 810 para 944px — a moldura corta 134px de conteúdo pelo rodapé, e o corte só
+       aparece na exportação. */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #fafffd; text-decoration: none; }
+    a:hover { color: #c4c0ff; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #4b39ef; font-family: Inter, system-ui, sans-serif; color: #fafffd;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(72% 92% at 24% 8%, rgba(27,19,92,.62), transparent 64%), radial-gradient(58% 70% at 92% 96%, rgba(114,125,228,.5), transparent 62%);"></div>
+
+  <div style="position: relative; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 72px 96px;">
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-family: Outfit, sans-serif; font-size: 27px; font-weight: 400; letter-spacing: -.01em; color: rgba(250,255,253,.82);">oi</span>
+      <span style="font-family: Outfit, sans-serif; font-size: 27px; font-weight: 700; letter-spacing: -.02em;">Bill</span>
+      <svg width="34" height="17" viewBox="0 0 34 17" fill="none" style="margin-left: -2px;">
+        <path d="M1.5 9.2 L6.6 14.3 L16.2 3" stroke="#fafffd" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15.5 9.2 L20.6 14.3 L32 2.5" stroke="#fafffd" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div>
+      <p style="margin: 0 0 26px; font-size: 13px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: rgba(250,255,253,.7);">Teste ao vivo</p>
+
+      <h2 style="margin: 0 0 20px; font-family: Outfit, sans-serif; font-size: 46px; font-weight: 500; line-height: 56px; letter-spacing: -.025em; color: rgba(250,255,253,.82);">
+        Com os 48 e-mails reais já processados
+      </h2>
+
+      <a href="https://bill-poc.vercel.app" style="display: inline-block; font-family: Outfit, sans-serif; font-size: 74px; font-weight: 700; line-height: 84px; letter-spacing: -.035em; border-bottom: 4px solid rgba(250,255,253,.4); padding-bottom: 6px;">
+        bill-poc.vercel.app
+      </a>
+
+      <p style="margin: 38px 0 0; font-size: 21px; line-height: 32px; max-width: 820px; color: rgba(250,255,253,.78);">
+        O botão <span style="color: #fafffd; font-weight: 500;">Buscar novos e-mails</span> lê a caixa ao vivo pela Gmail API
+        e processa o que ainda não foi visto — um e-mail por vez, com progresso na tela.
+      </p>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;">
+      <div style="display: flex; gap: 44px;">
+        <div>
+          <p style="margin: 0 0 5px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(250,255,253,.55);">Repositório</p>
+          <p style="margin: 0; font-size: 17px;">github.com/PauloRbtoCodes/bill-poc</p>
+        </div>
+        <div>
+          <p style="margin: 0 0 5px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(250,255,253,.55);">Stack</p>
+          <p style="margin: 0; font-size: 17px;">Python · Next.js · Postgres no Supabase · Vercel</p>
+        </div>
+      </div>
+
+      <svg width="58" height="29" viewBox="0 0 34 17" fill="none" style="flex-shrink: 0; opacity: .5;">
+        <path d="M1.5 9.2 L6.6 14.3 L16.2 3" stroke="#fafffd" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15.5 9.2 L20.6 14.3 L32 2.5" stroke="#fafffd" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

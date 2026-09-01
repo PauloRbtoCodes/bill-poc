@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap">
+  <style>
+    /* Sem isto, o container interno soma `height: 100%` com o próprio padding e passa
+       de 810 para 944px — a moldura corta 134px de conteúdo pelo rodapé, e o corte só
+       aparece na exportação. */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #c4c0ff; } a:hover { color: #fafffd; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #14103d; font-family: Inter, system-ui, sans-serif; color: #fafffd;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(58% 78% at 88% 88%, rgba(75,57,239,.4), transparent 64%);"></div>
+
+  <div style="position: relative; height: 100%; display: flex; flex-direction: column; padding: 70px 96px 64px;">
+
+    <p style="margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: rgba(196,192,255,.75);">O problema</p>
+    <h2 style="margin: 0 0 8px; font-family: Outfit, sans-serif; font-size: 54px; font-weight: 600; line-height: 62px; letter-spacing: -.025em;">
+      Um LLM erra de um jeito perigoso
+    </h2>
+    <p style="margin: 0 0 46px; font-size: 20px; line-height: 30px; color: rgba(250,255,253,.66); max-width: 800px;">
+      Ele não erra devolvendo lixo. Ele erra devolvendo algo <span style="color:#fafffd;">plausível</span> — e plausível ninguém confere.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; flex-grow: 1;">
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.11); border-radius: 16px; backdrop-filter: blur(20px); padding: 40px; display: flex; flex-direction: column; justify-content: center;">
+        <p style="margin: 0 0 22px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,181,155,.9);">O modelo leu</p>
+        <p style="margin: 0; font-family: Outfit, sans-serif; font-size: 66px; font-weight: 600; letter-spacing: -.03em; color: #ffb59b;">R$ 987,00</p>
+        <p style="margin: 22px 0 0; font-size: 17px; line-height: 26px; color: rgba(250,255,253,.6);">Uma casa decimal a menos. O número existe, a formatação é válida, o fornecedor é o certo.</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,.05); border: 1px solid rgba(196,192,255,.26); border-radius: 16px; backdrop-filter: blur(20px); padding: 40px; display: flex; flex-direction: column; justify-content: center;">
+        <p style="margin: 0 0 22px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(196,192,255,.9);">O boleto diz</p>
+        <p style="margin: 0; font-family: Outfit, sans-serif; font-size: 66px; font-weight: 600; letter-spacing: -.03em; color: #c4c0ff;">R$ 9.870,00</p>
+        <p style="margin: 22px 0 0; font-size: 17px; line-height: 26px; color: rgba(250,255,253,.6);">O fornecedor não recebe. A conta vence. A multa chega semanas depois.</p>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 34px; display: flex; align-items: center; gap: 16px; padding: 22px 28px; border-radius: 14px; background: rgba(75,57,239,.2); border: 1px solid rgba(196,192,255,.24);">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0;">
+        <path d="M12 8.4v4.4M12 16.4h.01M10.3 3.9 2.4 17.4a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="#c4c0ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p style="margin: 0; font-size: 19px; line-height: 28px;">
+        Numa fila de 200 contas, <span style="font-weight: 500;">ninguém confere as que parecem certas</span>. É por isso que confiança sozinha não resolve.
+      </p>
+    </div>
+
+  </div>
+
+  <p style="position: absolute; right: 44px; bottom: 30px; margin: 0; font-family: Outfit, sans-serif; font-size: 14px; color: rgba(250,255,253,.28);">02</p>
+</div>
+</x-dc>
+</body>
+</html>
