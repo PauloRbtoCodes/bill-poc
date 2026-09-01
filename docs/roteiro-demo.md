@@ -6,6 +6,16 @@ o código depois, e a UI por último.
 
 ---
 
+## O link
+
+**https://bill-poc.vercel.app** — já com os 48 e-mails processados. Mande antes da call;
+o entrevistador pode abrir enquanto conversam.
+
+O botão **Buscar novos e-mails** lê a caixa ao vivo pela Gmail API e processa o que ainda
+não foi visto, um e-mail por vez com progresso na tela.
+
+---
+
 ## Antes de começar (5 min, sozinho)
 
 ```bash
