@@ -30,8 +30,11 @@ out/
 .DS_Store
 *.log
 
-# Storage local de anexos e cache de respostas de LLM
+# Anexos e cache de LLM. O .storage guarda PDFs de terceiros (boletos reais de
+# fornecedores do cliente) — nunca vão para o repositório. O conteúdo canônico dos
+# documentos fica no Postgres; o disco local é só conveniência de desenvolvimento.
 .storage/
+**/.storage/
 .cache/
 
 # Anexos e e-mails reais ficam fora; os RÓTULOS do golden set são versionados
