@@ -32,7 +32,7 @@ uv run billpoc report
 
 # 4. UI
 uv run uvicorn billpoc.api:app --port 8000   # em um terminal
-cd ../web && npm install && npm run dev      # em outro → localhost:3000
+cd .. && npm install && npm run dev      # em outro → localhost:3000
 ```
 
 Publicado na Vercel + Supabase — ver [docs/deploy.md](docs/deploy.md).
@@ -287,7 +287,7 @@ origem `humano`. O par (o que o modelo leu, o que o humano corrigiu) é sinal de
 
 ## 4. Como o Finance Partner opera
 
-Três telas ([`apps/web`](apps/web)), desenhadas na ordem do trabalho real.
+Três telas ([`a raiz do repo`](a raiz do repo)), desenhadas na ordem do trabalho real.
 
 ### Caixa de entrada
 
@@ -449,7 +449,7 @@ apps/api/src/billpoc/
   api.py        HTTP para a UI
 apps/api/tests/
   golden/       16 casos da caixa real rotulados à mão
-apps/web/       Next.js — três telas
+       Next.js — três telas
 db/schema.sql   16 tabelas, 2 views
 docs/           setup e o planejamento original
 ```

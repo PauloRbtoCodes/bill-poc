@@ -92,7 +92,7 @@ Registro do que foi feito, em ordem. Atualizar a cada etapa concluída.
   sem nenhuma credencial. Rodar isso ponta a ponta revelou três bugs (extração via XML
   perdia a marca de determinística; DANFE + XML geravam duas contas; identificador do
   boleto de arrecadação fora da faixa), todos corrigidos.
-- **`api.py` + `apps/web/`** — API HTTP e as três telas do Finance Partner. Ver a tela
+- **`api.py` + ``** — API HTTP e as três telas do Finance Partner. Ver a tela
   revelou mais dois bugs: fornecedor sem CNPJ sumia da lista, e confiança geral ia a zero
   por campo ausente. Corrigidos na raiz (coluna `beneficiario_nome` no payable; campos
   sem valor não entram no cálculo da confiança).

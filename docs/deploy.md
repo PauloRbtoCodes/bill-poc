@@ -4,7 +4,7 @@ Arquitetura publicada:
 
 ```
   Vercel (um projeto, dois runtimes)
-  ├── apps/web        Next.js — as três telas
+  ├── app/ + lib/     Next.js — as três telas
   └── api/index.py    FastAPI como função serverless Python
                           │
                           ▼
@@ -52,7 +52,7 @@ interromper no meio não corrompe nada.
 
 ```bash
 cd /home/inteli/Documentos/case-bill
-git remote add origin git@github.com:SEU-USUARIO/case-bill.git
+git remote add origin https://github.com/SEU-USUARIO/bill-poc.git
 git push -u origin main
 ```
 
@@ -63,9 +63,9 @@ segredo nem e-mail de terceiros vai para o repositório.
 
 ## 3. Vercel
 
-1. **vercel.com** → login com GitHub → **Add New → Project** → importe `case-bill`
-2. **Root Directory: deixe a raiz** (não aponte para `apps/web` — o `vercel.json` na raiz
-   é que declara os dois runtimes)
+1. **vercel.com** → login com GitHub → **Add New → Project** → importe `bill-poc`
+2. **Root Directory: deixe a raiz** — o Next.js vive na raiz e o `vercel.json` declara
+   a função Python em `api/`
 3. Em **Environment Variables**, adicione:
 
 | Variável | Valor |
@@ -121,6 +121,6 @@ Deve responder `{"ok":true,...}` com `llm` e `gmail` em `true`.
 | `A Serverless Function has exceeded the unzipped maximum size` | Alguma dependência voltou ao `api/requirements.txt`. O pacote está em ~59MB; o limite é 250MB. |
 | `FUNCTION_INVOCATION_TIMEOUT` no sync | Um e-mail específico está demorando >60s. Reduza `SYNC_JANELA` ou pule aquele e-mail. |
 | `too many connections` | Está usando a string direta (5432) em vez do pooler (6543). |
-| Build do Next.js falha | Rode `cd apps/web && npm run build` local para ver o erro real. |
+| Build do Next.js falha | Rode `npm run build` na raiz para ver o erro real. |
 
 O log completo fica em **Vercel → o deploy → Building / Functions**.

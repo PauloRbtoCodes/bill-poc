@@ -59,12 +59,9 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: apps/web/package-lock.json
-      - working-directory: apps/web
-        run: npm ci
+          cache-dependency-path: package-lock.json
+      - run: npm ci
       - name: Typecheck
-        working-directory: apps/web
         run: npx tsc --noEmit
       - name: Build
-        working-directory: apps/web
         run: npm run build
