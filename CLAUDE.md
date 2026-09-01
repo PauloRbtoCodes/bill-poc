@@ -19,10 +19,10 @@ de e-mails. O planejamento completo está em [docs/plano.md](docs/plano.md).
 ### Modo de operação
 
 - **Automode.** Trabalho direto e ininterrupto, sem checkpoints de confirmação.
-- Interromper o usuário só quando algo bloqueia de verdade. Os três bloqueios
-  conhecidos estão em [Setup pendente](#setup-pendente).
-- Enquanto as credenciais externas não existem, tudo roda com `fixtures/` +
-  Postgres local via Docker.
+- Interromper o usuário só quando algo bloqueia de verdade — na prática, só criação de
+  conta e digitação de senha, que agentes não fazem.
+- Tudo roda offline com `billpoc run --fonte demo --somente-cache`; a caixa real precisa
+  das credenciais em [Setup](#setup).
 
 ### Convenções de código
 
@@ -42,7 +42,7 @@ de e-mails. O planejamento completo está em [docs/plano.md](docs/plano.md).
 | Abordagem de extração | Híbrida: LLM + validadores determinísticos | Cobertura do LLM com piso aritmético onde está o dinheiro |
 | Captura | Gmail API (OAuth desktop) | Senha de conta não autentica mais em IMAP no Gmail |
 | Stack | Python (pipeline) + Next.js (UI) | Ecossistema de PDF/parsing em Python; UI apresentável para o Finance Partner |
-| Datastore | Supabase Postgres | Relacional para ERP + auditoria; painel pronto para a demo |
+| Datastore | Postgres (local via Docker; Supabase opcional) | Relacional para ERP + auditoria; schema idêntico nos dois |
 | Modelo | `claude-opus-5` na extração, `claude-haiku-4-5` na triagem | Modelo caro só no que passa da triagem |
 
 **A tese central:** valor e vencimento de um boleto estão aritmeticamente codificados na
@@ -52,16 +52,17 @@ LLM leu e o que o código de barras diz derruba o registro para revisão humana.
 
 ---
 
-## Setup pendente
+## Setup
 
-Três coisas que dependem do usuário e ainda não estão configuradas:
+| Item | Status | Onde |
+|---|---|---|
+| Gmail OAuth | ✅ autorizado | `credentials.json` + `token.json` na raiz (fora do git) |
+| Anthropic API key | ✅ configurada | `ANTHROPIC_API_KEY` no `.env` |
+| Banco | ✅ Postgres local via `docker compose` | `DATABASE_URL` no `.env` |
+| Supabase | ⬜ opcional | mesmo schema; só trocar `DATABASE_URL`. Ver [docs/setup.md](docs/setup.md) |
 
-1. **Google Cloud** — projeto → habilitar Gmail API → OAuth client tipo "Desktop" →
-   baixar como `credentials.json` na raiz. Depois `uv run billpoc auth`.
-2. **Supabase** — criar projeto e colocar a connection string em `.env`.
-3. **Anthropic** — API key de console.anthropic.com em `.env`.
-
-Status: ⬜ nenhum configurado. Desenvolvimento seguindo com fixtures + Postgres local.
+`uv run billpoc doctor` confere tudo. O passo a passo para reproduzir num ambiente novo
+está em [docs/setup.md](docs/setup.md).
 
 ---
 
