@@ -36,3 +36,6 @@ out/
 
 # Anexos e e-mails reais ficam fora; os RÓTULOS do golden set são versionados
 !apps/api/tests/golden/casos.json
+
+# Vercel
+.vercel

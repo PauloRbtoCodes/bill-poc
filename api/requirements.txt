@@ -1,0 +1,11 @@
+# Dependências da função serverless. Deliberadamente separadas do pyproject de
+# desenvolvimento: o limite de tamanho da função é 250MB descompactados, e ruff, pytest
+# e afins não têm o que fazer em produção.
+fastapi>=0.115
+pydantic>=2.9
+psycopg[binary]>=3.2
+python-dotenv>=1.0
+anthropic>=0.69
+pdfplumber>=0.11
+google-api-python-client>=2.150
+google-auth-oauthlib>=1.2

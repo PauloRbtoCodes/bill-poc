@@ -139,21 +139,24 @@ class Pipeline:
             return xmls + [a for a in relevantes if a.e_imagem]
         return relevantes or [None]
 
-    def _guardar(self, anexo: Anexo) -> str:
-        """Grava o anexo em disco, nomeado pelo sha256.
+    def _guardar(self, anexo: Anexo) -> str | None:
+        """Grava uma cópia do anexo em disco, quando há disco onde gravar.
 
-        A UI de revisão mostra o PDF ao lado dos campos extraídos — sem o arquivo, o
-        revisor teria que confiar na evidência textual em vez de olhar o documento, que
-        é justamente o que se quer evitar. Nomear pelo hash dá dedup de graça: o mesmo
-        boleto em três e-mails ocupa espaço uma vez.
+        O conteúdo canônico vai para o Postgres — em deploy serverless não existe disco
+        persistente, e perder o PDF no primeiro restart tornaria a tela de revisão inútil.
+        A cópia local é só conveniência de desenvolvimento (abrir o arquivo no editor).
 
-        Em produção isso seria um bucket privado com URL assinada, não o disco local.
+        Nomear pelo hash dá dedup de graça: o mesmo boleto em três e-mails ocupa espaço
+        uma vez.
         """
-        destino = self.config.storage_dir / f"{anexo.sha256}{_sufixo(anexo.nome_arquivo)}"
-        if not destino.exists():
-            destino.parent.mkdir(parents=True, exist_ok=True)
-            destino.write_bytes(anexo.conteudo)
-        return str(destino)
+        try:
+            destino = self.config.storage_dir / f"{anexo.sha256}{_sufixo(anexo.nome_arquivo)}"
+            if not destino.exists():
+                destino.parent.mkdir(parents=True, exist_ok=True)
+                destino.write_bytes(anexo.conteudo)
+            return str(destino)
+        except OSError:  # sistema de arquivos somente leitura (serverless)
+            return None
 
     def _processar_documento(
         self,
@@ -171,6 +174,7 @@ class Pipeline:
                 anexo,
                 contar_paginas(anexo.conteudo) if anexo.e_pdf else None,
                 storage_uri=self._guardar(anexo),
+                conteudo=anexo.conteudo,
             )
 
         # --- extração -----------------------------------------------------------------

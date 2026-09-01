@@ -137,6 +137,7 @@ def montar_pipeline(repo, extrator) -> Pipeline:
         cache_dir=__import__("pathlib").Path(".cache"),
         storage_dir=__import__("pathlib").Path("/tmp/billpoc-test-storage"),
         org_id=repo.org_id,
+        sync_janela=60,
     )
     return Pipeline(cfg, repo, extrator)
 

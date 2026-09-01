@@ -96,17 +96,19 @@ class Repositorio:
         anexo: Anexo,
         paginas: int | None = None,
         storage_uri: str | None = None,
+        conteudo: bytes | None = None,
     ) -> str:
         with self.conexao.cursor() as cur:
             cur.execute(
                 """
                 insert into documents (
                     org_id, email_message_id, nome_arquivo, mime_type,
-                    tamanho_bytes, sha256, tipo, paginas, storage_uri
-                ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    tamanho_bytes, sha256, tipo, paginas, storage_uri, conteudo
+                ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 on conflict (org_id, sha256) do update
                     set nome_arquivo = excluded.nome_arquivo,
-                        storage_uri = coalesce(excluded.storage_uri, documents.storage_uri)
+                        storage_uri = coalesce(excluded.storage_uri, documents.storage_uri),
+                        conteudo = coalesce(excluded.conteudo, documents.conteudo)
                 returning id
                 """,
                 (
@@ -119,14 +121,24 @@ class Repositorio:
                     anexo.classificar(),
                     paginas,
                     storage_uri,
+                    conteudo,
                 ),
             )
             return str(cur.fetchone()["id"])
 
+    def message_ids_conhecidos(self) -> set[str]:
+        """Os `gmail_message_id` já ingeridos. Base da sincronização incremental."""
+        with self.conexao.cursor() as cur:
+            cur.execute(
+                "select gmail_message_id from email_messages where org_id = %s",
+                (self.org_id,),
+            )
+            return {linha["gmail_message_id"] for linha in cur.fetchall()}
+
     def documento(self, document_id: str) -> dict[str, Any] | None:
         with self.conexao.cursor() as cur:
             cur.execute(
-                "select id, nome_arquivo, mime_type, storage_uri from documents "
+                "select id, nome_arquivo, mime_type, storage_uri, conteudo from documents "
                 "where id = %s and org_id = %s",
                 (document_id, self.org_id),
             )

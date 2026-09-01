@@ -27,9 +27,11 @@ from .validate.tempo import hoje as hoje_brasil
 cfg = carregar()
 
 app = FastAPI(title="billpoc", description="Contas a pagar a partir de e-mails")
+# Em produção o front e a API estão no mesmo domínio da Vercel, então CORS não se
+# aplica. A liberação é só para o desenvolvimento local, onde são portas diferentes.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -67,24 +69,27 @@ def detalhe(payable_id: str, repo: Repositorio = Repo) -> dict[str, Any]:
 
 
 @app.get("/api/documentos/{document_id}/arquivo")
-def arquivo(document_id: str, repo: Repositorio = Repo) -> FileResponse:
+def arquivo(document_id: str, repo: Repositorio = Repo) -> Response:
     """Serve o PDF original para a revisão lado a lado.
 
     O revisor precisa ver o documento, não só a evidência textual que o modelo alegou
     ter lido — é o documento que decide um conflito.
     """
     doc = repo.documento(document_id)
-    if not doc or not doc["storage_uri"]:
-        raise HTTPException(404, "documento sem arquivo guardado")
-    caminho = Path(doc["storage_uri"])
-    if not caminho.exists():
-        raise HTTPException(404, "arquivo não encontrado no storage")
-    return FileResponse(
-        caminho,
-        media_type=doc["mime_type"],
-        # inline para renderizar no visualizador, não baixar
-        headers={"Content-Disposition": f'inline; filename="{doc["nome_arquivo"]}"'},
-    )
+    if not doc:
+        raise HTTPException(404, "documento não encontrado")
+
+    # inline para renderizar no visualizador, não baixar
+    cabecalhos = {"Content-Disposition": f'inline; filename="{doc["nome_arquivo"]}"'}
+
+    if doc["conteudo"]:
+        return Response(bytes(doc["conteudo"]), media_type=doc["mime_type"], headers=cabecalhos)
+
+    # Anexos gravados antes de o conteúdo passar a ir para o banco.
+    if doc["storage_uri"] and Path(doc["storage_uri"]).exists():
+        return FileResponse(doc["storage_uri"], media_type=doc["mime_type"], headers=cabecalhos)
+
+    raise HTTPException(404, "arquivo não disponível")
 
 
 @app.get("/api/ruido")
@@ -151,6 +156,78 @@ def exportar_agenda(
     # Latin-1 no CNAB: é o encoding que os bancos esperam no arquivo de remessa.
     dados = corpo.encode("latin-1", errors="replace") if formato == "cnab" else corpo.encode("utf-8-sig")
     return Response(content=dados, media_type=tipo, headers=cabecalhos)
+
+
+# ======================================================================================
+# Sincronização com a caixa
+# ======================================================================================
+
+
+class ResultadoSync(BaseModel):
+    processados: int
+    restantes: int
+    concluido: bool
+    ultimo: str | None = None
+    faixa: str | None = None
+    e_ruido: bool = False
+    erro: str | None = None
+
+
+@app.post("/api/sync")
+def sync(lote: int = 1, repo: Repositorio = Repo) -> ResultadoSync:
+    """Processa os próximos e-mails ainda não vistos da caixa.
+
+    **Incremental de propósito.** Uma função serverless tem 60 segundos; processar 48
+    e-mails com chamadas de LLM leva minutos. Em vez de um endpoint que estoura o
+    timeout no meio e deixa estado pela metade, cada chamada processa um lote pequeno e
+    devolve quantos faltam — a UI chama de novo até acabar, mostrando progresso.
+
+    O efeito colateral é bom: como cada e-mail é uma transação própria e a ingestão é
+    idempotente por `gmail_message_id`, interromper no meio não corrompe nada. Recomeçar
+    continua de onde parou.
+    """
+    from .extract.claude import Extrator
+    from .ingest.gmail import GmailSource
+    from .pipeline import Pipeline
+
+    if not cfg.tem_gmail:
+        raise HTTPException(400, "Gmail não autorizado — defina GMAIL_TOKEN_JSON")
+    if not cfg.tem_llm:
+        raise HTTPException(400, "sem chave da Anthropic — defina ANTHROPIC_API_KEY")
+
+    origem = GmailSource(cfg.gmail_credentials, cfg.gmail_token, cfg.gmail_query)
+    pipeline = Pipeline(
+        cfg,
+        repo,
+        Extrator(
+            modelo_triagem=cfg.modelo_triagem,
+            modelo_extracao=cfg.modelo_extracao,
+            cache_dir=None,  # serverless não tem disco; o banco é a memória
+        ),
+    )
+
+    # Lista só os ids (uma chamada para cada 100 e-mails) e baixa apenas os que faltam.
+    # Baixar a caixa inteira a cada passo para descobrir o que falta transformaria uma
+    # sincronização de 50 e-mails em milhares de chamadas à API do Gmail.
+    ja_vistos = repo.message_ids_conhecidos()
+    faltando = [i for i in origem.listar_ids(limite=cfg.sync_janela) if i not in ja_vistos]
+
+    processados: list[Any] = []
+    for message_id in faltando[: max(1, lote)]:
+        processados.append(pipeline.processar(origem.buscar(message_id)))
+
+    pendentes = max(0, len(faltando) - len(processados))
+
+    ultimo = processados[-1] if processados else None
+    return ResultadoSync(
+        processados=len(processados),
+        restantes=pendentes,
+        concluido=pendentes == 0,
+        ultimo=ultimo.assunto if ultimo else None,
+        faixa=ultimo.faixa if ultimo else None,
+        e_ruido=bool(ultimo and ultimo.e_ruido),
+        erro=ultimo.erro if ultimo else None,
+    )
 
 
 @app.get("/api/relatorio")

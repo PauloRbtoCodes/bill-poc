@@ -15,7 +15,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, brl, dataBR, type ItemFila } from "@/lib/api";
 
 interface ItemRuido {
@@ -81,7 +81,9 @@ export default function CaixaDeEntrada() {
             {fila.length} cobrança(s) aguardando decisão · {brl(total)} no total
           </p>
         </div>
-        <div className="flex gap-1 rounded-lg bg-stone-100 p-1 text-sm">
+        <div className="flex items-center gap-3">
+          <Sincronizar aoTerminar={carregar} />
+          <div className="flex gap-1 rounded-lg bg-stone-100 p-1 text-sm">
           <Aba ativa={faixa === "revisar"} onClick={() => setFaixa("revisar")} contagem={revisar.length}>
             Revisar
           </Aba>
@@ -91,6 +93,7 @@ export default function CaixaDeEntrada() {
           <Aba ativa={faixa === "ruido"} onClick={() => setFaixa("ruido")} contagem={ruido.length}>
             Ruído
           </Aba>
+          </div>
         </div>
       </div>
 
@@ -101,6 +104,77 @@ export default function CaixaDeEntrada() {
       ) : (
         <ListaCobrancas itens={faixa === "revisar" ? revisar : prontos} faixa={faixa} />
       )}
+    </div>
+  );
+}
+
+/**
+ * Sincronização com a caixa de e-mail.
+ *
+ * Chama `/api/sync` em laço, um e-mail por vez, até o backend dizer que acabou. Parece
+ * ineficiente, mas é o que cabe no limite de 60 segundos de uma função serverless — e
+ * como cada e-mail é uma transação própria e a ingestão é idempotente, interromper no
+ * meio (fechar a aba, cair a rede) não corrompe nada: recomeçar continua de onde parou.
+ *
+ * O progresso aparece na tela porque processar uma caixa leva minutos, e uma barra que
+ * não se move é indistinguível de um sistema travado.
+ */
+function Sincronizar({ aoTerminar }: { aoTerminar: () => Promise<void> }) {
+  const [rodando, setRodando] = useState(false);
+  const [progresso, setProgresso] = useState<{ feitos: number; faltam: number; atual: string } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const cancelar = useRef(false);
+
+  async function sincronizar() {
+    setRodando(true);
+    setErro(null);
+    cancelar.current = false;
+    let feitos = 0;
+
+    try {
+      for (;;) {
+        const r = await api.sync(1);
+        feitos += r.processados;
+        setProgresso({ feitos, faltam: r.restantes, atual: r.ultimo ?? "" });
+        await aoTerminar();
+        if (r.concluido || cancelar.current || r.processados === 0) break;
+      }
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRodando(false);
+      setTimeout(() => setProgresso(null), 4000);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {progresso && (
+        <span className="text-xs text-stone-500">
+          {rodando ? (
+            <>
+              {progresso.feitos} processado(s)
+              {progresso.faltam > 0 && `, ${progresso.faltam} na fila`}
+              {progresso.atual && (
+                <span className="ml-1 text-stone-400">— {progresso.atual.slice(0, 34)}</span>
+              )}
+            </>
+          ) : (
+            <span className="text-emerald-700">{progresso.feitos} e-mail(s) processado(s)</span>
+          )}
+        </span>
+      )}
+      {erro && <span className="max-w-64 truncate text-xs text-red-600" title={erro}>{erro}</span>}
+      <button
+        onClick={rodando ? () => (cancelar.current = true) : sincronizar}
+        className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+          rodando
+            ? "border border-stone-300 text-stone-600 hover:bg-stone-50"
+            : "bg-stone-900 text-white hover:bg-stone-800"
+        }`}
+      >
+        {rodando ? "Parar" : "Buscar novos e-mails"}
+      </button>
     </div>
   );
 }

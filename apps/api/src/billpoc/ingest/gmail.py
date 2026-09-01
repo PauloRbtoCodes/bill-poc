@@ -16,6 +16,7 @@ primeira; a segunda é outra implementação de `MailSource`.
 from __future__ import annotations
 
 import base64
+import os
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -72,11 +73,29 @@ class GmailSource:
         self.token_path.write_text(credenciais.to_json())
 
     def _credenciais(self):
+        """Carrega o token, do arquivo local ou da variável de ambiente.
+
+        Em deploy serverless não há disco persistente para guardar `token.json`, então o
+        conteúdo dele vai como secret em `GMAIL_TOKEN_JSON`. O refresh acontece em
+        memória: o token de acesso dura uma hora e é renovado a cada invocação fria, o
+        que é aceitável. O que **não** pode acontecer é o refresh token se perder — por
+        isso ele vem do secret e não de um arquivo que o host apaga.
+        """
+        import json
+
         from google.auth.transport.requests import Request
         from google.oauth2.credentials import Credentials
 
+        if bruto := os.getenv("GMAIL_TOKEN_JSON"):
+            credenciais = Credentials.from_authorized_user_info(json.loads(bruto), ESCOPOS)
+            if credenciais.expired and credenciais.refresh_token:
+                credenciais.refresh(Request())
+            return credenciais
+
         if not self.token_path.exists():
-            raise RuntimeError("não autorizado — rode `billpoc auth` primeiro")
+            raise RuntimeError(
+                "não autorizado — rode `billpoc auth`, ou defina GMAIL_TOKEN_JSON"
+            )
 
         credenciais = Credentials.from_authorized_user_file(str(self.token_path), ESCOPOS)
         if credenciais.expired and credenciais.refresh_token:
@@ -96,17 +115,25 @@ class GmailSource:
     # Leitura
     # ---------------------------------------------------------------------------------
 
-    def listar(
+    def listar_ids(
         self, limite: int | None = None, desde: datetime | None = None
-    ) -> Iterator[EmailCapturado]:
+    ) -> list[str]:
+        """Só os identificadores, sem baixar as mensagens.
+
+        Separado de `listar` porque a diferença de custo é enorme: `messages.list`
+        devolve cem ids numa chamada, enquanto baixar cada mensagem é uma chamada por
+        e-mail. A sincronização incremental precisa saber *quais* e-mails existem para
+        decidir o que ainda falta — baixar todos só para descobrir isso transformaria
+        cada passo em dezenas de chamadas à API.
+        """
         query = self.query
         if desde is not None:
             # O operador `after:` do Gmail tem granularidade de dia; o filtro fino fica
             # no `recebido_em` depois, para não perder mensagem na borda.
             query = f"{query} after:{desde.strftime('%Y/%m/%d')}".strip()
 
+        ids: list[str] = []
         pagina = None
-        vistos = 0
         while True:
             resposta = (
                 self.service.users()
@@ -115,20 +142,24 @@ class GmailSource:
                     userId="me",
                     q=query or None,
                     pageToken=pagina,
-                    maxResults=min(100, limite - vistos) if limite else 100,
+                    maxResults=min(100, limite - len(ids)) if limite else 100,
                 )
                 .execute()
             )
-
-            for referencia in resposta.get("messages", []):
-                if limite is not None and vistos >= limite:
-                    return
-                yield self._buscar(referencia["id"])
-                vistos += 1
-
+            ids.extend(m["id"] for m in resposta.get("messages", []))
             pagina = resposta.get("nextPageToken")
-            if not pagina or (limite is not None and vistos >= limite):
-                return
+            if not pagina or (limite is not None and len(ids) >= limite):
+                return ids[:limite] if limite else ids
+
+    def buscar(self, message_id: str) -> EmailCapturado:
+        """Baixa uma mensagem específica pelo id."""
+        return self._buscar(message_id)
+
+    def listar(
+        self, limite: int | None = None, desde: datetime | None = None
+    ) -> Iterator[EmailCapturado]:
+        for message_id in self.listar_ids(limite, desde):
+            yield self._buscar(message_id)
 
     def _buscar(self, message_id: str) -> EmailCapturado:
         """Baixa a mensagem em RFC822 cru — o mesmo formato de um arquivo .eml."""

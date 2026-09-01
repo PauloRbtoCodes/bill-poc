@@ -86,6 +86,12 @@ create table documents (
                         check (tipo in ('boleto_pdf', 'nfe_xml', 'danfe_pdf',
                                         'fatura_pdf', 'imagem', 'recibo', 'desconhecido')),
     paginas             int,
+    -- O conteúdo do anexo vive no banco, não em disco. Num deploy serverless ou em
+    -- container o disco é efêmero, e o revisor precisa ver o PDF ao lado dos campos —
+    -- perder o arquivo no primeiro restart tornaria a tela de revisão inútil.
+    -- São poucos KB por boleto; em produção isso vira bucket privado com URL assinada,
+    -- e a coluna `storage_uri` passa a apontar para lá.
+    conteudo            bytea,
     storage_uri         text,
     criado_em           timestamptz not null default now(),
     unique (org_id, sha256)

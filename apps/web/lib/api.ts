@@ -115,8 +115,19 @@ async function req<T>(caminho: string, init?: RequestInit): Promise<T> {
   return resposta.json();
 }
 
+export interface ResultadoSync {
+  processados: number;
+  restantes: number;
+  concluido: boolean;
+  ultimo: string | null;
+  faixa: string | null;
+  e_ruido: boolean;
+  erro: string | null;
+}
+
 export const api = {
   fila: () => req<ItemFila[]>("/fila"),
+  sync: (lote = 1) => req<ResultadoSync>(`/sync?lote=${lote}`, { method: "POST" }),
   detalhe: (id: string) => req<Detalhe>(`/payables/${id}`),
   agenda: () => req<ItemAgenda[]>("/agenda"),
   editar: (id: string, campo: string, valor: string) =>

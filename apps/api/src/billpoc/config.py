@@ -49,6 +49,8 @@ class Config:
     storage_dir: Path
 
     org_id: str
+    # Quantos e-mails recentes a sincronização olha por vez.
+    sync_janela: int
 
     @property
     def tem_llm(self) -> bool:
@@ -62,7 +64,7 @@ class Config:
 
     @property
     def tem_gmail(self) -> bool:
-        return self.gmail_token.exists()
+        return self.gmail_token.exists() or bool(os.getenv("GMAIL_TOKEN_JSON"))
 
 
 def _caminho(env: str, padrao: Path) -> Path:
@@ -96,4 +98,5 @@ def carregar() -> Config:
         cache_dir=_caminho("CACHE_DIR", RAIZ / ".cache" / "llm"),
         storage_dir=_caminho("STORAGE_DIR", RAIZ / ".storage"),
         org_id=os.getenv("ORG_ID", ORG_DEMO),
+        sync_janela=int(os.getenv("SYNC_JANELA", "60")),
     )
