@@ -35,6 +35,8 @@ uv run uvicorn billpoc.api:app --port 8000   # em um terminal
 cd ../web && npm install && npm run dev      # em outro → localhost:3000
 ```
 
+Publicado na Vercel + Supabase — ver [docs/deploy.md](docs/deploy.md).
+
 Para rodar sobre a caixa real do desafio, veja [docs/setup.md](docs/setup.md) —
 são três credenciais e uns 10 minutos. `uv run billpoc doctor` diz o que falta.
 
