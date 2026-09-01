@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
+from . import enrich
 from .config import Config
 from .extract.claude import Extrator, Uso
 from .extract.nfe_xml import extrair_de_xml
@@ -35,7 +36,7 @@ from .extract.schemas import (
 from .ingest.base import Anexo, EmailCapturado
 from .store.repositories import Repositorio
 from .validate.boleto import encontrar_linhas_digitaveis
-from .validate.rules import Conciliacao, conciliar
+from .validate.rules import Campo, Conciliacao, Verificacao, conciliar
 from .validate.tempo import hoje as hoje_brasil
 
 logger = logging.getLogger(__name__)
@@ -228,6 +229,7 @@ class Pipeline:
             razao_social=(campo_benef.valor if campo_benef else None) or "",
             dominio=email.dominio_remetente,
         )
+        grupo_id = self._enriquecer(vendor_id, extraido, conciliacao)
         self.repo.registrar_passo(run_id, "enrich", document_id=document_id)
 
         # --- persistência -------------------------------------------------------------
@@ -239,12 +241,86 @@ class Pipeline:
             conciliacao=conciliacao,
             vendor_id=vendor_id,
             duplicado_de=duplicado_de,
+            recurrence_group_id=grupo_id,
         )
         self.repo.registrar_passo(run_id, "persist", document_id=document_id)
         resultado.payables.append(payable_id)
         resultado.duplicado = resultado.duplicado or duplicado_de is not None
 
     # ---------------------------------------------------------------------------------
+
+    def _enriquecer(
+        self, vendor_id: str | None, extraido: DocumentoExtraido, conciliacao: Conciliacao
+    ) -> str | None:
+        """Deixa o histórico do fornecedor sobrepor o palpite do modelo.
+
+        O segundo boleto de um fornecedor deveria ser mais fácil que o primeiro. O modelo
+        lê um documento isolado e não tem como saber que esta empresa sempre classificou
+        este fornecedor como SOFTWARE, ou que o aluguel vem todo dia 10 — o histórico
+        sabe, é determinístico e não custa nada.
+
+        Devolve o id do grupo de recorrência, quando houver.
+        """
+        if vendor_id is None:
+            return None
+
+        valor = conciliacao.campos.get("valor")
+        valor_centavos = int(valor.valor * 100) if valor and valor.valor else None
+        valores, datas, categoria_confirmada = self.repo.historico_do_fornecedor(vendor_id)
+
+        avaliacao = enrich.avaliar(
+            valor_centavos=valor_centavos,
+            historico_valores=valores,
+            historico_datas=datas,
+            categoria_do_fornecedor=categoria_confirmada,
+        )
+
+        # Categoria confirmada por humano vence a sugestão do modelo. Ele viu um PDF;
+        # quem confirmou conhece o plano de contas do cliente.
+        if avaliacao.categoria:
+            conciliacao.campos["categoria"] = Campo(
+                nome="categoria",
+                valor=avaliacao.categoria,
+                texto=avaliacao.categoria,
+                origem="historico",
+                confianca=1.0,
+                evidencia=f"categoria já definida para este fornecedor "
+                f"({avaliacao.ocorrencias} cobrança(s) no histórico)",
+            )
+
+        grupo_id = None
+        if avaliacao.recorrencia == "recorrente":
+            conciliacao.campos["recorrencia"] = Campo(
+                nome="recorrencia",
+                valor="recorrente",
+                texto="recorrente",
+                origem="historico",
+                confianca=1.0,
+                evidencia=f"{avaliacao.ocorrencias} cobranças anteriores deste fornecedor "
+                f"em cadência {avaliacao.cadencia}",
+            )
+            grupo_id = self.repo.registrar_recorrencia(
+                vendor_id,
+                descricao=extraido.descricao,
+                cadencia=avaliacao.cadencia or "mensal",
+                valor_esperado=avaliacao.valor_medio_centavos,
+            )
+
+        # Valor fora do padrão não bloqueia — só avisa. "Esse aluguel veio R$ 400 mais
+        # caro" é a pergunta que um analista humano faria, e é dele a decisão.
+        if avaliacao.valor_fora_do_padrao:
+            conciliacao.verificacoes.append(
+                Verificacao(
+                    nome="valor_fora_do_padrao",
+                    passou=False,
+                    severidade="alerta",
+                    esperado=f"~R$ {Decimal(avaliacao.valor_medio_centavos) / 100:.2f}",
+                    encontrado=f"R$ {Decimal(valor_centavos) / 100:.2f}",
+                    mensagem=avaliacao.descricao_variacao(),
+                )
+            )
+
+        return grupo_id
 
     def _completar_por_varredura(
         self, extraido: DocumentoExtraido, email: EmailCapturado, anexo: Anexo | None

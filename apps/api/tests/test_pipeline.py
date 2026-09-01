@@ -377,6 +377,122 @@ def test_aprovar_e_agendar_registra_o_pagamento_manual(repo):
 
 
 # ------------------------------------------------------------------------------------
+# Enriquecimento pelo histórico
+# ------------------------------------------------------------------------------------
+
+
+def _processar_mensalidades(repo, quantidade: int, valor=VALOR, cnpj="33000167000101"):
+    """Processa N cobranças mensais do mesmo fornecedor. Devolve os payables."""
+    ids = []
+    for i in range(quantidade):
+        venc = date(2026, 3 + i, 10)
+        linha = montar_boleto_bancario(vencimento=venc, valor=valor)
+        extrator = ExtratorFalso(
+            montar_triagem(),
+            montar_extraido(linha=linha, vencimento=venc.isoformat(), cnpj=cnpj),
+        )
+        r = montar_pipeline(repo, extrator).processar(
+            email_com_boleto(f"Mensalidade {i}", linha), HOJE
+        )
+        ids.extend(r.payables)
+    return ids
+
+
+def test_fornecedor_vira_recorrente_depois_de_tres_cobrancas(repo):
+    """O segundo boleto de um fornecedor deve ser mais fácil que o primeiro.
+
+    O modelo lê um documento isolado e chuta 'unico'. O histórico sabe que este
+    fornecedor cobra todo mês — e sabe de forma determinística.
+    """
+    ids = _processar_mensalidades(repo, 4)
+
+    primeiro = repo.detalhe(ids[0])
+    ultimo = repo.detalhe(ids[-1])
+
+    # O extrator falso sempre devolve 'unico'; o histórico corrige a partir da quarta.
+    assert primeiro["recorrencia"] == "unico"
+    assert ultimo["recorrencia"] == "recorrente"
+
+    campos = {c["campo"]: c for c in ultimo["campos"]}
+    assert campos["recorrencia"]["origem"] == "historico"
+    assert campos["recorrencia"]["confianca"] == 1
+    assert ultimo["recurrence_group_id"] is not None
+
+
+def test_categoria_confirmada_pelo_humano_vale_para_o_proximo_boleto(repo, conexao):
+    """Corrigir a categoria uma vez faz o fornecedor inteiro entrar certo.
+
+    É o mecanismo de aprendizado mais simples que existe: sem treino, sem prompt novo.
+    """
+    ids = _processar_mensalidades(repo, 1)
+    detalhe = repo.detalhe(ids[0])
+    assert detalhe["categoria_codigo"] == "SERVICOS_PJ"  # o que o modelo sugeriu
+
+    repo.definir_categoria_padrao(str(detalhe["vendor_id"]), "SOFTWARE")
+
+    linha = montar_boleto_bancario(vencimento=date(2026, 10, 10), valor=VALOR)
+    extrator = ExtratorFalso(
+        montar_triagem(), montar_extraido(linha=linha, vencimento="2026-10-10")
+    )
+    novo = montar_pipeline(repo, extrator).processar(
+        email_com_boleto("Outubro", linha), HOJE
+    )
+
+    seguinte = repo.detalhe(novo.payables[0])
+    assert seguinte["categoria_codigo"] == "SOFTWARE"
+    campos = {c["campo"]: c for c in seguinte["campos"]}
+    assert campos["categoria"]["origem"] == "historico"
+
+
+def test_valor_fora_do_padrao_alerta_sem_bloquear(repo):
+    """'Esse aluguel veio R$ 400 mais caro' — a pergunta que um analista faria."""
+    _processar_mensalidades(repo, 3, valor=Decimal("1000.00"))
+
+    caro = montar_boleto_bancario(vencimento=date(2026, 7, 10), valor=Decimal("3000.00"))
+    extrator = ExtratorFalso(
+        montar_triagem(),
+        montar_extraido(linha=caro, valor="3000.00", vencimento="2026-07-10"),
+    )
+    r = montar_pipeline(repo, extrator).processar(email_com_boleto("Julho", caro), HOJE)
+
+    conciliacao = r.conciliacoes[0]
+    alertas = {v.nome for v in conciliacao.alertas}
+    assert "valor_fora_do_padrao" in alertas
+    # Alerta, não bloqueio: quem decide se o valor está certo é o humano.
+    assert "valor_fora_do_padrao" not in {v.nome for v in conciliacao.bloqueios}
+
+
+def test_variacao_normal_nao_gera_alerta(repo):
+    _processar_mensalidades(repo, 3, valor=Decimal("1000.00"))
+
+    linha = montar_boleto_bancario(vencimento=date(2026, 7, 10), valor=Decimal("1050.00"))
+    extrator = ExtratorFalso(
+        montar_triagem(),
+        montar_extraido(linha=linha, valor="1050.00", vencimento="2026-07-10"),
+    )
+    r = montar_pipeline(repo, extrator).processar(email_com_boleto("Julho", linha), HOJE)
+    assert "valor_fora_do_padrao" not in {v.nome for v in r.conciliacoes[0].alertas}
+
+
+def test_historico_de_um_fornecedor_nao_contamina_outro(repo):
+    """Isolamento por vendor: cada CNPJ tem o seu próprio histórico."""
+    _processar_mensalidades(repo, 4, valor=Decimal("1000.00"))
+
+    outro = montar_boleto_bancario(vencimento=date(2026, 8, 10), valor=Decimal("5000.00"))
+    extrator = ExtratorFalso(
+        montar_triagem(),
+        montar_extraido(
+            linha=outro, valor="5000.00", vencimento="2026-08-10", cnpj="00000000000191"
+        ),
+    )
+    r = montar_pipeline(repo, extrator).processar(email_com_boleto("Outro", outro), HOJE)
+
+    detalhe = repo.detalhe(r.payables[0])
+    assert detalhe["recorrencia"] == "unico"  # fornecedor novo, sem histórico
+    assert "valor_fora_do_padrao" not in {v.nome for v in r.conciliacoes[0].alertas}
+
+
+# ------------------------------------------------------------------------------------
 # Fila e resiliência
 # ------------------------------------------------------------------------------------
 

@@ -229,6 +229,92 @@ class Repositorio:
             )
             return str(cur.fetchone()["id"])
 
+    def historico_do_fornecedor(
+        self, vendor_id: str, ignorar_payable: str | None = None
+    ) -> tuple[list[int], list[date], str | None]:
+        """Cobranças anteriores deste fornecedor: valores, vencimentos e a categoria.
+
+        Devolve a categoria só quando ela foi **confirmada por um humano** — ou seja,
+        quando existe uma edição em `review_actions` ou o fornecedor tem categoria padrão
+        definida. A sugestão que o próprio LLM deu em cobranças passadas não conta: se
+        contasse, um erro de categorização se propagaria para sempre, ficando cada vez
+        mais "confirmado" sem ninguém nunca ter olhado.
+        """
+        with self.conexao.cursor() as cur:
+            cur.execute(
+                """
+                select p.valor_centavos, p.data_vencimento
+                  from payables p
+                 where p.org_id = %s and p.vendor_id = %s
+                   and p.status not in ('duplicado', 'rejeitado')
+                   and p.valor_centavos > 0
+                   and (%s::uuid is null or p.id <> %s::uuid)
+                 order by p.data_vencimento desc nulls last
+                 limit 24
+                """,
+                (self.org_id, vendor_id, ignorar_payable, ignorar_payable),
+            )
+            linhas = cur.fetchall()
+
+            cur.execute(
+                """
+                select c.codigo
+                  from vendors v
+                  join expense_categories c on c.id = v.categoria_padrao_id
+                 where v.id = %s and v.org_id = %s
+                """,
+                (vendor_id, self.org_id),
+            )
+            linha = cur.fetchone()
+
+        valores = [int(x["valor_centavos"]) for x in linhas]
+        datas = [x["data_vencimento"] for x in linhas if x["data_vencimento"]]
+        return valores, datas, (linha["codigo"] if linha else None)
+
+    def definir_categoria_padrao(self, vendor_id: str, codigo: str) -> None:
+        """Fixa a categoria de um fornecedor a partir de uma decisão humana.
+
+        É o mecanismo de aprendizado mais simples que existe e o mais defensável: o
+        Finance Partner corrige a categoria uma vez, e o fornecedor inteiro passa a
+        entrar certo — sem treinar nada, sem prompt novo.
+        """
+        if (categoria_id := self.categoria_id(codigo)) is None:
+            return
+        with self.conexao.cursor() as cur:
+            cur.execute(
+                "update vendors set categoria_padrao_id = %s, atualizado_em = now() "
+                "where id = %s and org_id = %s",
+                (categoria_id, vendor_id, self.org_id),
+            )
+
+    def registrar_recorrencia(
+        self, vendor_id: str, descricao: str, cadencia: str, valor_esperado: int | None
+    ) -> str:
+        """Cria ou atualiza o grupo de recorrência do fornecedor."""
+        with self.conexao.cursor() as cur:
+            cur.execute(
+                "select id from recurrence_groups where org_id=%s and vendor_id=%s "
+                "and ativo limit 1",
+                (self.org_id, vendor_id),
+            )
+            if linha := cur.fetchone():
+                cur.execute(
+                    "update recurrence_groups set cadencia=%s, valor_esperado_centavos=%s "
+                    "where id=%s",
+                    (cadencia, valor_esperado, linha["id"]),
+                )
+                return str(linha["id"])
+
+            cur.execute(
+                """
+                insert into recurrence_groups
+                    (org_id, vendor_id, descricao, cadencia, valor_esperado_centavos)
+                values (%s, %s, %s, %s, %s) returning id
+                """,
+                (self.org_id, vendor_id, descricao, cadencia, valor_esperado),
+            )
+            return str(cur.fetchone()["id"])
+
     def categoria_id(self, codigo: str) -> str | None:
         with self.conexao.cursor() as cur:
             cur.execute(
@@ -304,6 +390,7 @@ class Repositorio:
         conciliacao: Conciliacao,
         vendor_id: str | None,
         duplicado_de: str | None,
+        recurrence_group_id: str | None = None,
     ) -> str:
         campos = conciliacao.campos
         valor: Decimal | None = campos["valor"].valor if "valor" in campos else None
@@ -317,13 +404,15 @@ class Repositorio:
                     org_id, vendor_id, tipo_documento, numero_documento, chave_nfe,
                     descricao, beneficiario_nome,
                     valor_centavos, data_emissao, data_vencimento,
-                    categoria_id, recorrencia, status, faixa, confianca_geral,
+                    categoria_id, recorrencia, recurrence_group_id,
+                    status, faixa, confianca_geral,
                     email_message_id, document_id, run_id, duplicado_de_id
                 ) values (
                     %(org)s, %(vendor)s, %(tipo)s, %(numero)s, %(chave)s,
                     %(descricao)s, %(beneficiario)s,
                     %(valor)s, %(emissao)s, %(vencimento)s,
-                    %(categoria)s, %(recorrencia)s, %(status)s, %(faixa)s, %(conf)s,
+                    %(categoria)s, %(recorrencia)s, %(grupo)s,
+                    %(status)s, %(faixa)s, %(conf)s,
                     %(email)s, %(doc)s, %(run)s, %(dup)s
                 ) returning id
                 """,
@@ -340,8 +429,17 @@ class Repositorio:
                     "valor": int(valor * 100) if valor is not None else 0,
                     "emissao": _como_data(emissao.valor if emissao else None),
                     "vencimento": _como_data(vencimento.valor if vencimento else None),
-                    "categoria": self.categoria_id(extraido.categoria.categoria),
-                    "recorrencia": extraido.recorrencia.recorrencia,
+                    "categoria": self.categoria_id(
+                        campos["categoria"].valor
+                        if "categoria" in campos
+                        else extraido.categoria.categoria
+                    ),
+                    "recorrencia": (
+                        campos["recorrencia"].valor
+                        if "recorrencia" in campos
+                        else extraido.recorrencia.recorrencia
+                    ),
+                    "grupo": recurrence_group_id,
                     "status": "duplicado" if duplicado_de else "em_revisao",
                     "faixa": conciliacao.faixa,
                     "conf": conciliacao.confianca_geral,
