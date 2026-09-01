@@ -1,15 +1,5 @@
 {
   "version": 2,
-
-  "//": [
-    "Monorepo com dois runtimes: o Next.js vive em apps/web e a API Python em api/.",
-    "A forma declarativa (`builds`) é a que suporta isso — a detecção automática da",
-    "Vercel assume um framework só na raiz, e aqui são dois em diretórios diferentes.",
-    "",
-    "includeFiles é essencial: o pacote billpoc mora em apps/api/src, fora do diretório",
-    "da função. Sem isso o import falha em produção e passa despercebido no build."
-  ],
-
   "builds": [
     {
       "src": "api/index.py",
@@ -24,7 +14,6 @@
       "use": "@vercel/next"
     }
   ],
-
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.py" }
   ]
