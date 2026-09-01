@@ -39,10 +39,37 @@ Para rodar sobre a caixa real do desafio, veja [docs/setup.md](docs/setup.md) �
 são três credenciais e uns 10 minutos. `uv run billpoc doctor` diz o que falta.
 
 ```bash
-uv run billpoc auth                 # OAuth do Gmail, abre o navegador
-uv run billpoc ingest --limit 50    # baixa os e-mails para fixtures/
-uv run billpoc run                  # processa de verdade
+uv run billpoc auth                  # OAuth do Gmail, abre o navegador
+uv run billpoc ingest --limite 60    # baixa os e-mails para fixtures/
+uv run billpoc run                   # processa de verdade
+uv run billpoc golden                # mede a acurácia contra os casos rotulados
 ```
+
+---
+
+## Rodou sobre a caixa real
+
+Não é só uma demo com dados fabricados — o pipeline processou os **48 e-mails de
+`financeiro.test@gmail.com`**:
+
+| | |
+|---|---|
+| Ruído descartado | **42 (87%)** — alertas do Google, verificações de conta, e-mails de teste de outro candidato |
+| Cobranças identificadas | **6** — LELLO Condomínios, Enel, Lord Fibra, Starfiber, MAC Ibirapuera |
+| Erros | **0** |
+| Custo | **US$ 0,36** |
+| Acurácia (golden set) | triagem **16/16**, valor **4/4**, vencimento **5/5**, **zero cobranças perdidas** |
+
+O que a caixa real ensinou, e que dados fabricados não teriam ensinado:
+
+- **Todas as cobranças chegam encaminhadas** de uma mesma pessoa — o `From` é do
+  encaminhador, não do fornecedor.
+- **Dois dos seis boletos vêm em PDF protegido por senha.** Num deles, a linha digitável
+  estava no corpo do e-mail e a varredura determinística resolveu o caso sem abrir o PDF.
+- **O mesmo provedor de internet aparece com dois nomes** (Starfiber e Lord Fibra), o que
+  é exatamente por que o casamento de fornecedor é por CNPJ e não por nome.
+- **Marketing da Enel** e **pedido interno de conciliação com planilha anexa** são os
+  ruídos difíceis: remetente legítimo, anexo financeiro, nenhuma obrigação de pagar.
 
 ---
 
@@ -274,10 +301,32 @@ curto para registrar **banco, data e protocolo** na volta.
 agendou. `payment_schedules` é a ponte entre o sistema e o que aconteceu de fato, e o
 protocolo é o que permite reconciliar depois.
 
-**O próximo passo natural** — não implementado — é sair do copiar-e-colar: exportar CNAB
-240 ou OFX para upload em lote no banco, e depois iniciação de pagamento via Pix ou Open
-Finance. A tabela `payment_schedules` já tem o formato para receber a confirmação
-automática quando isso existir.
+**Exportação em lote.** Copiar-e-colar resolve três contas; trinta é o volume de um
+cliente pequeno de verdade. O botão *Exportar* gera três formatos
+([`exportar.py`](apps/api/src/billpoc/exportar.py)):
+
+| Formato | Destino |
+|---|---|
+| **CNAB 240** | remessa de pagamento — sobe no internet banking e agenda o lote inteiro |
+| **CSV** | planilha e contador; ponto e vírgula com vírgula decimal, o dialeto que o Excel brasileiro abre sem transformar valor em data |
+| **Layout de ERP** | lançamentos a pagar no formato que Conta Azul e Omie importam |
+
+Dois detalhes do CNAB que valem citar. O segmento J carrega o **código de barras de 44
+dígitos**, não a linha digitável de 47 — truncar a linha em 44 seria pagar outro título,
+então o valor é decodificado e não cortado. E os cinco registros são declarados como
+listas de campos nomeados, o que torna o total de 240 caracteres verificável por
+construção; foi assim que descobri que meu header de lote tinha 235.
+
+Pagamentos sem boleto (Pix, link) ficam fora do CNAB, mas o header `X-Pagamentos-Fora`
+conta quantos e eles continuam listados na tela — sumir em silêncio seria pior que não
+exportar.
+
+*Ressalva honesta:* o layout CNAB tem variações por banco e o arquivo aqui é o FEBRABAN
+genérico. Para produção, cada banco atendido precisa de validação contra o manual dele e
+homologação. O que está aqui é a estrutura correta, não um arquivo homologado.
+
+**Depois disso** viria iniciação de pagamento via Pix ou Open Finance. A tabela
+`payment_schedules` já tem o formato para receber a confirmação automática.
 
 ---
 
@@ -289,11 +338,16 @@ automática quando isso existir.
 - Sem OCR dedicado: a visão do modelo cobre boleto fotografado razoável e degrada em
   foto ruim — o cenário `foto-ilegivel` na demo mostra o comportamento (confiança baixa,
   campos em branco, revisão obrigatória), que é o correto, mas não resolve o documento.
-- Sem write-back em ERP real.
+- **PDF protegido por senha** (bancos e imobiliárias usam o CPF/CNPJ do pagador) não é
+  aberto. Dois dos seis boletos da caixa real são assim. O sistema detecta, não gasta a
+  chamada, e manda para revisão com a dica da senha — e num deles a linha digitável
+  estava no corpo do e-mail, então a varredura determinística salvou o caso.
+- Write-back em ERP só por arquivo, não pela API.
 - Categorização por lista fechada, sem o plano de contas do cliente.
 - Boleto parcelado/carnê: a NF-e com múltiplas duplicatas registra só a primeira parcela
   e sinaliza em `observacoes`.
 - Anexos em disco local, não em bucket com URL assinada.
+- CNAB no layout FEBRABAN genérico, sem homologação por banco.
 
 ### O que quebra em escala
 
@@ -306,11 +360,44 @@ automática quando isso existir.
   entram Batch API para backfill (50% do custo) e prompt caching no system prompt.
 - **Deduplicação.** Dedup por linha digitável, não por `message_id`: o mesmo boleto chega
   como original, lembrete e segunda via.
+- **E-mail encaminhado.** Na caixa real, *todas* as cobranças chegam como `Fwd:` de uma
+  mesma pessoa — o header `From` é do encaminhador, não do fornecedor. Sem tratar isso,
+  os seis boletos casariam com um único "fornecedor" de domínio `gmail.com`. O parser lê
+  o cabeçalho original de dentro do corpo (Gmail em inglês e português, Outlook), pegando
+  o bloco mais profundo quando há encaminhamento aninhado. Isso não é detalhe: em muitos
+  clientes, encaminhar a cobrança para o financeiro *é* o processo.
 - **Multi-tenant.** `org_id` já está em tudo; falta ligar RLS no Supabase e mover os
   documentos para bucket privado com retenção LGPD.
-- **Drift de prompt e modelo.** `prompt_version` já é gravado em cada `processing_step`.
-  Falta a golden set de regressão em CI: queda de acurácia por campo bloqueia o deploy.
-  O cache determinístico deste repo é o embrião disso.
+- **Drift de prompt e modelo.** Resolvido pela golden set (abaixo); falta só pendurar em
+  CI, o que é uma linha de workflow.
+
+### Como se mede que uma mudança melhorou
+
+Prompt e modelo mudam, e "mexi no prompt e ficou melhor" sem número é opinião. A golden
+set ([`tests/test_golden.py`](apps/api/tests/test_golden.py)) tem **16 casos da caixa
+real rotulados à mão** — 6 cobranças e 10 ruídos, incluindo os difíceis: um marketing da
+Enel (fornecedor de verdade, mas sem cobrança) e um pedido interno de conciliação com
+planilha anexa.
+
+Roda em modo somente-cache: determinística, offline, sem custo. `billpoc golden` imprime
+as métricas; `pytest` falha se caírem abaixo do piso.
+
+Os pisos são **assimétricos de propósito**: recall da triagem exige 100%, precisão
+aceita 90%. Um falso positivo aparece na fila e o revisor descarta em dois minutos; um
+falso negativo some, a conta não é paga, e o cliente descobre pela multa.
+
+Duas invariantes da política também são verificadas sobre dados reais, porque são o tipo
+de coisa que um refactor quebra em silêncio: **nada com verificação bloqueante entra na
+faixa rápida**, e **campo determinístico nunca carrega confiança parcial**.
+
+Resultado atual sobre a caixa do desafio:
+
+```
+Triagem correta     16/16
+Valor correto         4/4
+Vencimento correto    5/5
+Cobranças perdidas  nenhuma
+```
 
 ### O que eu faria a seguir
 
@@ -319,8 +406,9 @@ o sinal de treino: depois de N extrações confirmadas do mesmo remetente e layo
 para parser determinístico e tirar aquele fornecedor do caminho do LLM. O custo cai e a
 confiança sobe com o uso — a curva certa para um produto que ganha clientes.
 
-Depois: write-back em Omie/Conta Azul, exportação CNAB/OFX, e WhatsApp e portal de
-fornecedor como canais adicionais de entrada.
+Depois: write-back direto na API do Omie/Conta Azul (o export por arquivo já está feito),
+iniciação de pagamento via Pix ou Open Finance, e WhatsApp e portal de fornecedor como
+canais adicionais de entrada.
 
 ---
 
@@ -335,13 +423,17 @@ apps/api/src/billpoc/
   store/        SQL direto, sem ORM
   demo/         gerador da caixa de demonstração (inclui um gerador de PDF)
   pipeline.py   as seis etapas
+  exportar.py   CNAB 240, CSV e layout de ERP
   api.py        HTTP para a UI
+apps/api/tests/
+  golden/       16 casos da caixa real rotulados à mão
 apps/web/       Next.js — três telas
 db/schema.sql   16 tabelas, 2 views
 docs/           setup e o planejamento original
 ```
 
-**Testes:** 107, sem mock de banco — os 12 de ponta a ponta rodam contra Postgres real.
+**Testes:** 132, sem mock de banco — os de ponta a ponta rodam contra Postgres real, e a
+golden set roda contra os e-mails reais.
 
 ```bash
 cd apps/api && uv run pytest -q
