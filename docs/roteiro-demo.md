@@ -21,6 +21,10 @@ Deixe três terminais e duas abas prontos:
 | Terminal 1 | `apps/api`, livre para os comandos |
 | Terminal 2 | `uv run uvicorn billpoc.api:app --port 8000` |
 | Terminal 3 | `cd apps/web && npm run dev` |
+
+> Não rode `npm run build` com o `npm run dev` de pé — os dois compartilham `.next` e o
+> dev server quebra com `Cannot find module './vendor-chunks/next.js'`. Se acontecer:
+> `rm -rf .next` e reinicie o dev.
 | Aba 1 | `localhost:3000` |
 | Aba 2 | o repositório aberto no editor |
 

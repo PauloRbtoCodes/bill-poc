@@ -130,5 +130,28 @@ chave de conta comum). Depois: `billpoc ingest && billpoc run` processa a caixa 
 - A caixa também tem e-mails de teste de outro candidato ("Conciliação Maio/2026",
   "Demo Conciliacao v21") — todos classificados como ruído corretamente.
 
-**Estado final:** POC completa, roda offline (`billpoc semear`) e sobre a caixa real.
-107 testes, ruff/tsc limpos. API em :8000, UI em :3000.
+### 2026-09-01 — rodada final antes da entrega
+
+Fechados os itens que o README prometia e o código não fazia:
+
+- **Encaminhamento.** Todas as cobranças da caixa real chegam como `Fwd:` da mesma
+  pessoa. `detectar_encaminhamento()` lê o cabeçalho original de dentro do corpo (Gmail
+  em inglês e português, Outlook), pegando o bloco mais profundo em encaminhamento
+  aninhado. Sem isso, os seis boletos casariam com um fornecedor `gmail.com`.
+- **Golden set.** 16 casos da caixa real rotulados à mão, rodando em modo somente-cache.
+  Pisos assimétricos: recall 100%, precisão 90%. `billpoc golden` imprime as métricas.
+- **Exportação.** CNAB 240, CSV e layout de ERP. Os cinco registros do CNAB são
+  declarados como listas de campos nomeados — foi assim que apareceu que meu header de
+  lote tinha 235 caracteres em vez de 240.
+- **Enriquecimento pelo histórico.** O README dizia que existia; agora existe. Categoria
+  confirmada por humano vence o LLM, três cobranças em cadência viram `recorrente` com
+  origem `historico`, e valor fora do padrão alerta. Detecção de cadência exige
+  consistência, não só mediana plausível.
+- **Casamento por domínio corporativo** quando não há CNPJ, com lista de provedores
+  pessoais excluídos.
+- **PDF protegido por senha** (2 dos 6 boletos reais) detectado antes de gastar a chamada.
+- **CI** com Postgres de serviço, e `docs/roteiro-demo.md` para a call.
+
+**Estado final:** 151 testes, ruff e tsc limpos, build de produção do front OK.
+Caixa real: 48 e-mails, 42 ruído, 6 cobranças, 0 erros, US$ 0,36, acurácia 100%.
+Duas caixas separadas: `--fonte eml` (real) e `--fonte demo` (cenários curados).
