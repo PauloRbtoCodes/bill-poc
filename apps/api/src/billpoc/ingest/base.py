@@ -253,19 +253,19 @@ def html_para_texto(html: str) -> str:
 # --------------------------------------------------------------------------------------
 
 # Prefixos que os clientes de e-mail empilham no assunto ao encaminhar ou responder.
-_PREFIXO_ENCAMINHAMENTO = re.compile(r"^(?:\s*(?:fwd?|enc|re|res|encaminhada?)\s*:\s*)+", re.I)
+_PREFIXO_ENCAMINHAMENTO = re.compile(r"^(?:\s*(?:fwd?|enc|re|res|encaminhada?)\s*:\s*)+", re.IGNORECASE)
 
 # Marcadores de início de bloco encaminhado. Gmail em inglês e em português, Outlook,
 # e a linha de sublinhados que alguns clientes usam.
 _MARCADOR_ENCAMINHAMENTO = re.compile(
     r"^\s*(?:-{2,}\s*(?:forwarded message|mensagem encaminhada|original message|"
     r"mensagem original)\s*-{2,}|_{10,})\s*$",
-    re.I | re.M,
+    re.IGNORECASE | re.MULTILINE,
 )
 
 # Dentro do bloco: "From: Nome <email>" ou "De: Nome <email>".
-_LINHA_FROM = re.compile(r"^\s*(?:from|de)\s*:\s*(.+)$", re.I | re.M)
-_LINHA_SUBJECT = re.compile(r"^\s*(?:subject|assunto)\s*:\s*(.+)$", re.I | re.M)
+_LINHA_FROM = re.compile(r"^\s*(?:from|de)\s*:\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+_LINHA_SUBJECT = re.compile(r"^\s*(?:subject|assunto)\s*:\s*(.+)$", re.IGNORECASE | re.MULTILINE)
 
 # Endereço solto ou no formato "Nome <endereco@dominio>".
 _ENDERECO = re.compile(r"<\s*([^<>@\s]+@[^<>@\s]+)\s*>|([^<>@\s]+@[^<>@\s]+)")
