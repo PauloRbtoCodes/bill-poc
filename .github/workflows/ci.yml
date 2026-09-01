@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+
+    # O mesmo Postgres do docker-compose. Os testes de ponta a ponta rodam contra banco
+    # de verdade em vez de mock: idempotência, transação e trilha de auditoria são
+    # comportamentos do banco, e mock não os exercita.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: billpoc
+          POSTGRES_DB: billpoc
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d billpoc"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:billpoc@localhost:55432/billpoc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Aplicar schema
+        run: |
+          psql "$DATABASE_URL" -f db/schema.sql -f db/seed.sql
+
+      - name: Lint
+        working-directory: apps/api
+        run: uv run ruff check src tests
+
+      - name: Testes
+        working-directory: apps/api
+        run: uv run pytest -q
+
+      # A golden set pula sozinha aqui: os .eml da caixa real não vão para o git
+      # (dados de terceiros). Num repositório de produção ela rodaria contra fixtures
+      # anonimizadas versionadas, e é ela que bloquearia o deploy numa queda de acurácia.
+      - name: Golden set (pula sem fixtures)
+        working-directory: apps/api
+        run: uv run pytest tests/test_golden.py -v
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - working-directory: apps/web
+        run: npm ci
+      - name: Typecheck
+        working-directory: apps/web
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
