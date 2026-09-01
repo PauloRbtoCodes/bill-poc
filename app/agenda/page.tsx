@@ -45,75 +45,91 @@ export default function Agenda() {
   }, {});
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Agenda de pagamento</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            {visiveis.length} conta(s) aprovada(s) · {brl(total)} a agendar
+          <p className="label-sm text-outline">Agenda de pagamento</p>
+          <h1 className="headline-lg mt-1 grad-text">{brl(total)} a agendar</h1>
+          <p className="mt-2 text-on-surface-variant">
+            {visiveis.length} conta(s) aprovada(s)
           </p>
         </div>
+
         <div className="flex items-center gap-3">
           <Exportar janela={janela} habilitado={visiveis.length > 0} />
-          <div className="flex gap-1 rounded-lg bg-stone-100 p-1 text-sm">
+          <div className="glass inline-flex gap-1 rounded-full p-1 text-sm">
             {([7, 30, 0] as const).map((d) => (
               <button
                 key={d}
                 onClick={() => setJanela(d)}
-                className={`rounded-md px-3 py-1.5 font-medium transition ${
-                  janela === d ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+                className={`rounded-full px-4 py-1.5 font-medium transition ${
+                  janela === d ? "text-mist-white" : "text-on-surface-variant hover:text-mist-white"
                 }`}
+                style={
+                  janela === d
+                    ? {
+                        background:
+                          "linear-gradient(135deg,var(--color-electric-indigo),var(--color-soft-lilac))",
+                        boxShadow: "0 0 18px -4px rgba(75,57,239,.6)",
+                      }
+                    : undefined
+                }
               >
                 {d === 0 ? "Todas" : `${d} dias`}
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </header>
 
       {carregando ? (
-        <p className="text-sm text-stone-400">Carregando…</p>
+        <p className="text-sm text-outline">Carregando…</p>
       ) : visiveis.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-stone-300 p-10 text-center">
+        <div className="glass rounded-lg p-12 text-center">
           {itens.length > 0 ? (
             // Distinguir "não há nada" de "o filtro escondeu tudo" — sem isso a tela
             // parece quebrada quando na verdade só não há vencimento próximo.
             <>
-              <p className="text-sm text-stone-500">
+              <p className="text-sm text-on-surface-variant">
                 Nenhuma conta vence nos próximos {janela} dias.
               </p>
               <button
                 onClick={() => setJanela(0)}
-                className="mt-2 text-sm text-stone-700 underline underline-offset-2"
+                className="mt-3 text-sm text-primary underline underline-offset-4"
               >
                 Ver as {itens.length} conta(s) aprovada(s)
               </button>
             </>
           ) : (
             <>
-              <p className="text-sm text-stone-500">Nada aprovado aguardando agendamento.</p>
-              <Link href="/" className="mt-2 inline-block text-sm text-stone-700 underline underline-offset-2">
+              <p className="text-sm text-on-surface-variant">
+                Nada aprovado aguardando agendamento.
+              </p>
+              <Link
+                href="/"
+                className="mt-3 inline-block text-sm text-primary underline underline-offset-4"
+              >
                 Ver a caixa de entrada
               </Link>
             </>
           )}
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {Object.entries(porData)
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([data, contas]) => (
               <div key={data}>
-                <div className="mb-2 flex items-baseline gap-3">
-                  <h2 className="text-sm font-semibold text-stone-700">
+                <div className="mb-3 flex flex-wrap items-baseline gap-3">
+                  <h2 className="headline-md text-[18px] text-mist-white">
                     {data === "sem-data" ? "Sem vencimento" : dataBR(data)}
                   </h2>
-                  <span className="text-xs text-stone-400">
+                  <span className="text-xs text-outline">
                     {contas.length} conta(s) ·{" "}
                     {brl(contas.reduce((s, c) => s + c.valor_centavos, 0))}
                   </span>
                   {contas[0]?.dias_para_vencer !== null && contas[0].dias_para_vencer <= 2 && (
-                    <span className="rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700 ring-1 ring-red-200">
+                    <span className="chip border-error/35 bg-error/14 text-error">
                       {contas[0].dias_para_vencer < 0
                         ? "vencida"
                         : contas[0].dias_para_vencer === 0
@@ -122,7 +138,7 @@ export default function Agenda() {
                     </span>
                   )}
                 </div>
-                <div className="divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-200 bg-white">
+                <div className="space-y-2">
                   {contas.map((item) => (
                     <LinhaPagamento key={item.id} item={item} aoAgendar={carregar} />
                   ))}
@@ -157,26 +173,26 @@ function Exportar({ janela, habilitado }: { janela: number; habilitado: boolean 
       <button
         onClick={() => setAberto((a) => !a)}
         disabled={!habilitado}
-        className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-40"
+        className="btn-ghost px-4 py-2 text-sm"
       >
         Exportar ▾
       </button>
       {aberto && habilitado && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setAberto(false)} />
-          <div className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lg">
+          <div className="glass-strong absolute right-0 z-20 mt-2 w-72 overflow-hidden rounded-md">
             {opcoes.map((o) => (
               <a
                 key={o.formato}
                 href={`/api/agenda/exportar?formato=${o.formato}${query}`}
                 onClick={() => setAberto(false)}
-                className="block border-b border-stone-100 px-3 py-2.5 text-left transition last:border-0 hover:bg-stone-50"
+                className="block border-b border-white/6 px-4 py-3 text-left transition last:border-0 hover:bg-white/8"
               >
-                <span className="block text-sm font-medium text-stone-800">{o.titulo}</span>
-                <span className="block text-xs text-stone-400">{o.descricao}</span>
+                <span className="block text-sm font-medium text-mist-white">{o.titulo}</span>
+                <span className="block text-xs text-outline">{o.descricao}</span>
               </a>
             ))}
-            <p className="bg-stone-50 px-3 py-2 text-[11px] leading-snug text-stone-400">
+            <p className="bg-black/25 px-4 py-2.5 text-[11px] leading-snug text-outline">
               O CNAB inclui só contas com boleto. Pix e transferência continuam no fluxo
               manual, e seguem listados aqui.
             </p>
@@ -192,29 +208,32 @@ function LinhaPagamento({ item, aoAgendar }: { item: ItemAgenda; aoAgendar: () =
   const codigo = item.linha_digitavel ?? item.pix_copia_e_cola ?? "";
 
   return (
-    <div className="p-4">
+    <div className="glass glass-hover rounded-md px-5 py-4">
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
-          <Link href={`/conta/${item.id}`} className="text-sm font-medium text-stone-900 hover:underline">
+          <Link
+            href={`/conta/${item.id}`}
+            className="font-medium text-mist-white transition hover:text-primary"
+          >
             {item.fornecedor ?? "—"}
           </Link>
-          <p className="mt-0.5 text-xs text-stone-400">
+          <p className="mt-0.5 text-xs text-outline">
             {item.cnpj ?? "sem CNPJ"}
             {item.numero_documento && ` · doc ${item.numero_documento}`}
             {item.forma_pagamento && ` · ${item.forma_pagamento.replace(/_/g, " ")}`}
           </p>
         </div>
-        <span className="text-sm font-medium tnum">{brl(item.valor_centavos)}</span>
+        <span className="headline-md text-[18px] text-mist-white">{brl(item.valor_centavos)}</span>
         <button
           onClick={() => setAberto((a) => !a)}
-          className="rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-stone-800"
+          className={`${aberto ? "btn-ghost" : "btn-primary"} px-4 py-2 text-xs`}
         >
           {aberto ? "Fechar" : "Agendar"}
         </button>
       </div>
 
       {codigo && (
-        <div className="mt-2">
+        <div className="mt-3">
           <Copiavel texto={codigo} />
         </div>
       )}
@@ -228,7 +247,7 @@ function Copiavel({ texto }: { texto: string }) {
   const [copiado, setCopiado] = useState(false);
   return (
     <div className="flex items-start gap-2">
-      <code className="min-w-0 flex-1 break-all rounded bg-stone-50 px-2 py-1.5 text-xs text-stone-600 tnum">
+      <code className="min-w-0 flex-1 break-all rounded bg-black/30 px-3 py-2 text-xs text-on-surface-variant">
         {texto.length > 120 ? `${texto.slice(0, 120)}…` : texto}
       </code>
       <button
@@ -237,7 +256,7 @@ function Copiavel({ texto }: { texto: string }) {
           setCopiado(true);
           setTimeout(() => setCopiado(false), 1500);
         }}
-        className="shrink-0 rounded border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 transition hover:bg-stone-50"
+        className="btn-ghost shrink-0 px-3 py-1.5 text-xs"
       >
         {copiado ? "copiado" : "copiar"}
       </button>
@@ -269,51 +288,51 @@ function FormAgendamento({ item, aoAgendar }: { item: ItemAgenda; aoAgendar: () 
   }
 
   return (
-    <div className="mt-3 rounded-lg bg-stone-50 p-3">
-      <p className="mb-2.5 text-xs text-stone-500">
+    <div className="mt-4 rounded-md bg-black/25 p-4">
+      <p className="mb-3 text-xs text-outline">
         Agende no banco e registre aqui o que aconteceu. O protocolo é o que permite
         reconciliar depois.
       </p>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="text-xs text-stone-500">
+        <label className="text-xs text-outline">
           Data agendada
           <input
             type="date"
             value={data}
             onChange={(e) => setData(e.target.value)}
-            className="mt-1 block rounded border border-stone-300 px-2 py-1 text-sm focus:border-stone-500 focus:outline-none"
+            className="field mt-1.5 block"
           />
         </label>
-        <label className="text-xs text-stone-500">
+        <label className="text-xs text-outline">
           Banco
           <select
             value={banco}
             onChange={(e) => setBanco(e.target.value)}
-            className="mt-1 block rounded border border-stone-300 px-2 py-1 text-sm focus:border-stone-500 focus:outline-none"
+            className="field mt-1.5 block"
           >
             {BANCOS.map((b) => (
               <option key={b}>{b}</option>
             ))}
           </select>
         </label>
-        <label className="text-xs text-stone-500">
+        <label className="text-xs text-outline">
           Protocolo do banco
           <input
             value={protocolo}
             onChange={(e) => setProtocolo(e.target.value)}
             placeholder="opcional"
-            className="mt-1 block rounded border border-stone-300 px-2 py-1 text-sm focus:border-stone-500 focus:outline-none"
+            className="field mt-1.5 block"
           />
         </label>
         <button
           onClick={confirmar}
           disabled={salvando || !data}
-          className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-50"
+          className="btn-primary px-4 py-2 text-sm"
         >
           Marcar como agendado
         </button>
       </div>
-      {erro && <p className="mt-2 text-xs text-red-600">{erro}</p>}
+      {erro && <p className="mt-2 text-xs text-error">{erro}</p>}
     </div>
   );
 }

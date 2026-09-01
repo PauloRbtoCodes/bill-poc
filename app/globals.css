@@ -1,15 +1,348 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Synthetic Intelligence Narrative
+   Glassmorphism sobre base escura de alto contraste.
+
+   Os tokens vêm do frontmatter do DESIGN.md. A prosa descreve Deep Space
+   (#1B135C) como tela principal enquanto o token `background` é #0f1414 —
+   resolvi usando #0f1414 como base sólida e Deep Space como brilho ambiente
+   por trás do conteúdo. O resultado tem o tom violeta que a prosa pede sem
+   contrariar o token.
+   ========================================================================== */
+
+@theme {
+  /* --- superfícies --- */
+  --color-surface: #0f1414;
+  --color-surface-dim: #0f1414;
+  --color-surface-bright: #353a39;
+  --color-surface-lowest: #0a0f0e;
+  --color-surface-low: #171d1c;
+  --color-surface-container: #1b2120;
+  --color-surface-high: #262b2a;
+  --color-surface-highest: #303635;
+  --color-surface-variant: #303635;
+
+  /* --- texto --- */
+  --color-on-surface: #dee4e2;
+  --color-on-surface-variant: #c7c4d9;
+  --color-outline: #918fa2;
+  --color-outline-variant: #464556;
+
+  /* --- marca --- */
+  --color-primary: #c4c0ff;
+  --color-on-primary: #2100a4;
+  --color-primary-container: #4b39ef;
+  --color-on-primary-container: #d4d0ff;
+
+  --color-secondary: #bdc2ff;
+  --color-on-secondary: #152089;
+  --color-secondary-container: #323da2;
+
+  --color-tertiary: #ffb59b;
+  --color-on-tertiary: #5b1a00;
+  --color-tertiary-container: #a53600;
+
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+
+  --color-deep-space: #1b135c;
+  --color-electric-indigo: #4b39ef;
+  --color-mist-white: #fafffd;
+  --color-soft-lilac: #727de4;
+
+  /* --- tipografia --- */
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* --- raios --- */
+  --radius-sm: 0.25rem;
+  --radius: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* --- grid de 8px --- */
+  --spacing: 8px;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+}
+
+html {
+  background-color: var(--color-surface);
 }
 
 body {
-  @apply bg-stone-50 text-stone-900 antialiased;
-  font-feature-settings: "tnum" 1; /* números tabulares: coluna de valores alinhada */
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  /* Números tabulares em toda a interface: colunas de dinheiro e data que não
+     se alinham verticalmente são mais difíceis de conferir, e conferir é o
+     trabalho inteiro desta tela. */
+  font-variant-numeric: tabular-nums;
 }
 
-/* Dinheiro, datas e linha digitável alinhados verticalmente na tabela. */
-.tnum {
-  font-variant-numeric: tabular-nums;
+/* O brilho ambiente.
+   Três manchas radiais — Deep Space no alto à esquerda, Electric Indigo à
+   direita, Soft Lilac no rodapé — dão a profundidade que a camada de vidro
+   precisa para ter o que desfocar atrás dela.
+
+   Ficam no `background-image` do próprio body, e não num pseudo-elemento com
+   z-index negativo: aquele fica *atrás* do background-color opaco do body e
+   simplesmente não aparece. `fixed` mantém a luz parada no scroll — ela vem
+   do ambiente, não do documento. */
+body {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(58rem 38rem at 12% -8%, rgba(27, 19, 92, 0.95), transparent 68%),
+    radial-gradient(46rem 32rem at 96% 4%, rgba(75, 57, 239, 0.3), transparent 64%),
+    radial-gradient(42rem 30rem at 52% 106%, rgba(114, 125, 228, 0.18), transparent 70%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-electric-indigo) 55%, transparent);
+  color: var(--color-mist-white);
+}
+
+/* ==========================================================================
+   Tipografia
+   ========================================================================== */
+
+.headline-xl {
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 72px;
+  letter-spacing: -0.02em;
+}
+
+.headline-lg {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 48px;
+  letter-spacing: -0.01em;
+}
+
+.headline-md {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 640px) {
+  .headline-lg {
+    font-size: 32px;
+    line-height: 40px;
+  }
+}
+
+.body-lg {
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.label-md {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.01em;
+}
+
+/* Cabeçalho de seção e indicador de status: maiúsculas com tracking largo dão
+   o aspecto estrutural de painel de controle que o design pede. */
+.label-sm {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Vidro
+   ========================================================================== */
+
+/* A profundidade vem de camada tonal e desfoque, não de sombra projetada.
+   O `inset` claro no topo simula a luz vindo de cima à esquerda. */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+}
+
+/* Ao passar o mouse, mais desfoque e um brilho externo em Electric Indigo —
+   o design chama isso de "energia" ou "ativação". */
+.glass-hover {
+  transition: background-color 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(196, 192, 255, 0.24);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 0 24px -4px rgba(75, 57, 239, 0.28);
+}
+
+/* Campo recuado: fundo mais escuro que o vidro, com borda que acende no foco. */
+.field {
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+  color: var(--color-on-surface);
+  padding: 6px 10px;
+  font-size: 14px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--color-electric-indigo);
+  box-shadow: 0 0 0 3px rgba(75, 57, 239, 0.25);
+}
+
+.field option {
+  background: var(--color-surface-container);
+  color: var(--color-on-surface);
+}
+
+/* Ícone nativo de data e seta de select ficam pretos sobre fundo escuro. */
+.field::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Botões
+   ========================================================================== */
+
+/* Gatilho primário: gradiente Electric Indigo → Soft Lilac, formato pílula.
+   O design reserva a pílula para as ações que disparam trabalho de verdade. */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-electric-indigo), var(--color-soft-lilac));
+  color: var(--color-mist-white);
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: box-shadow 160ms ease, filter 160ms ease;
+  box-shadow: 0 0 0 0 rgba(75, 57, 239, 0);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 0 22px -2px rgba(75, 57, 239, 0.55);
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Secundário "ghost": só borda translúcida e desfoque. */
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  color: var(--color-on-surface);
+  font-weight: 500;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Chips e barras
+   ========================================================================== */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Barra de progresso fina com brilho — "dados carregando". */
+.bar-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 240ms ease;
+}
+
+.bar-glow {
+  box-shadow: 0 0 8px -1px currentColor;
+}
+
+/* ==========================================================================
+   Utilidades
+   ========================================================================== */
+
+.grad-text {
+  background: linear-gradient(100deg, var(--color-mist-white), var(--color-primary) 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Barra de rolagem discreta, para não quebrar a estética escura. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }

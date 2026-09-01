@@ -166,22 +166,48 @@ export const DETERMINISTICAS: Origem[] = ["codigo_barras", "nfe_xml", "chave_nfe
  * O selo que aparece ao lado de cada campo. É a informação mais importante da tela:
  * distingue um valor que foi *conferido* por aritmética de um que foi *lido* por um
  * modelo. O revisor precisa saber, em um relance, no que pode confiar.
+ *
+ * No tema escuro as cores saem todas da paleta do design system, não de tons
+ * arbitrários. A escolha mapeia significado em vez de decorar:
+ *
+ *   primary (lilás)   → conferido. É a cor "confiante" da marca.
+ *   tertiary (pêssego)→ leitura do modelo. Quente, puxa o olho para onde vale olhar.
+ *   secondary (azul)  → correção humana.
+ *   soft-lilac        → histórico do fornecedor.
+ *
+ * O contraste lilás × pêssego separa "conferido" de "lido" em um relance, que é a
+ * única coisa que este selo precisa fazer.
  */
 export function selo(origem: Origem): { icone: string; rotulo: string; classe: string } {
   if (DETERMINISTICAS.includes(origem)) {
     return {
       icone: "🔒",
-      rotulo: { codigo_barras: "código de barras", nfe_xml: "XML da NF-e", chave_nfe: "chave da NF-e", pix: "Pix" }[
-        origem as "codigo_barras" | "nfe_xml" | "chave_nfe" | "pix"
-      ],
-      classe: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+      rotulo: {
+        codigo_barras: "código de barras",
+        nfe_xml: "XML da NF-e",
+        chave_nfe: "chave da NF-e",
+        pix: "Pix",
+      }[origem as "codigo_barras" | "nfe_xml" | "chave_nfe" | "pix"],
+      classe: "bg-primary/12 text-primary border-primary/30",
     };
   }
   if (origem === "humano")
-    return { icone: "✏️", rotulo: "corrigido por humano", classe: "bg-violet-50 text-violet-800 ring-violet-200" };
+    return {
+      icone: "✏️",
+      rotulo: "corrigido por humano",
+      classe: "bg-secondary/12 text-secondary border-secondary/30",
+    };
   if (origem === "historico")
-    return { icone: "📊", rotulo: "histórico do fornecedor", classe: "bg-sky-50 text-sky-800 ring-sky-200" };
-  return { icone: "🤖", rotulo: "leitura do modelo", classe: "bg-amber-50 text-amber-900 ring-amber-200" };
+    return {
+      icone: "📊",
+      rotulo: "histórico do fornecedor",
+      classe: "bg-soft-lilac/16 text-soft-lilac border-soft-lilac/35",
+    };
+  return {
+    icone: "🤖",
+    rotulo: "leitura do modelo",
+    classe: "bg-tertiary/12 text-tertiary border-tertiary/30",
+  };
 }
 
 export const ROTULOS_CAMPO: Record<string, string> = {

@@ -63,42 +63,44 @@ export default function CaixaDeEntrada() {
 
   if (erro)
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-        <p className="font-medium">Não consegui falar com a API.</p>
-        <pre className="mt-2 whitespace-pre-wrap text-xs">{erro}</pre>
-        <p className="mt-3 text-red-700">
-          Suba o backend com <code className="rounded bg-red-100 px-1">uv run uvicorn billpoc.api:app --port 8000</code>
-        </p>
+      <div className="glass rounded-lg p-6" style={{ borderColor: "rgba(255,180,171,.3)" }}>
+        <p className="label-sm text-error">Falha de conexão</p>
+        <p className="mt-2 text-sm text-on-surface">Não consegui falar com a API.</p>
+        <pre className="mt-3 overflow-auto rounded bg-black/30 p-3 text-xs text-on-surface-variant">
+          {erro}
+        </pre>
       </div>
     );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Caixa de entrada</h1>
-          <p className="mt-1 text-sm text-stone-500">
-            {fila.length} cobrança(s) aguardando decisão · {brl(total)} no total
+          <p className="label-sm text-outline">Caixa de entrada</p>
+          <h1 className="headline-lg mt-1 grad-text">
+            {fila.length} cobrança{fila.length === 1 ? "" : "s"} aguardando
+          </h1>
+          <p className="mt-2 text-on-surface-variant">
+            {brl(total)} no total · {ruido.length} e-mail(s) descartados como ruído
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Sincronizar aoTerminar={carregar} />
-          <div className="flex gap-1 rounded-lg bg-stone-100 p-1 text-sm">
-          <Aba ativa={faixa === "revisar"} onClick={() => setFaixa("revisar")} contagem={revisar.length}>
-            Revisar
-          </Aba>
-          <Aba ativa={faixa === "auto_ok"} onClick={() => setFaixa("auto_ok")} contagem={prontos.length}>
-            Pronto
-          </Aba>
-          <Aba ativa={faixa === "ruido"} onClick={() => setFaixa("ruido")} contagem={ruido.length}>
-            Ruído
-          </Aba>
-          </div>
-        </div>
+        <Sincronizar aoTerminar={carregar} />
+      </header>
+
+      <div className="glass inline-flex gap-1 rounded-full p-1 text-sm">
+        <Aba ativa={faixa === "revisar"} onClick={() => setFaixa("revisar")} contagem={revisar.length}>
+          Revisar
+        </Aba>
+        <Aba ativa={faixa === "auto_ok"} onClick={() => setFaixa("auto_ok")} contagem={prontos.length}>
+          Pronto
+        </Aba>
+        <Aba ativa={faixa === "ruido"} onClick={() => setFaixa("ruido")} contagem={ruido.length}>
+          Ruído
+        </Aba>
       </div>
 
       {carregando ? (
-        <p className="text-sm text-stone-400">Carregando…</p>
+        <p className="text-sm text-outline">Carregando…</p>
       ) : faixa === "ruido" ? (
         <ListaRuido itens={ruido} aoReclassificar={carregar} />
       ) : (
@@ -143,38 +145,53 @@ function Sincronizar({ aoTerminar }: { aoTerminar: () => Promise<void> }) {
       setErro(e instanceof Error ? e.message : String(e));
     } finally {
       setRodando(false);
-      setTimeout(() => setProgresso(null), 4000);
+      setTimeout(() => setProgresso(null), 5000);
     }
   }
 
+  const total = progresso ? progresso.feitos + progresso.faltam : 0;
+  const pct = total > 0 ? (progresso!.feitos / total) * 100 : 0;
+
   return (
-    <div className="flex items-center gap-2">
-      {progresso && (
-        <span className="text-xs text-stone-500">
-          {rodando ? (
-            <>
-              {progresso.feitos} processado(s)
-              {progresso.faltam > 0 && `, ${progresso.faltam} na fila`}
-              {progresso.atual && (
-                <span className="ml-1 text-stone-400">— {progresso.atual.slice(0, 34)}</span>
-              )}
-            </>
-          ) : (
-            <span className="text-emerald-700">{progresso.feitos} e-mail(s) processado(s)</span>
-          )}
-        </span>
-      )}
-      {erro && <span className="max-w-64 truncate text-xs text-red-600" title={erro}>{erro}</span>}
+    <div className="flex min-w-64 flex-col items-end gap-2">
       <button
         onClick={rodando ? () => (cancelar.current = true) : sincronizar}
-        className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-          rodando
-            ? "border border-stone-300 text-stone-600 hover:bg-stone-50"
-            : "bg-stone-900 text-white hover:bg-stone-800"
-        }`}
+        className={`${rodando ? "btn-ghost" : "btn-primary"} px-5 py-2.5 text-sm`}
       >
-        {rodando ? "Parar" : "Buscar novos e-mails"}
+        {rodando ? "Parar sincronização" : "Buscar novos e-mails"}
       </button>
+
+      {progresso && (
+        <div className="w-full max-w-72">
+          <div className="bar-track">
+            <div
+              className="bar-fill bar-glow"
+              style={{
+                width: `${rodando ? pct : 100}%`,
+                background: "linear-gradient(90deg,var(--color-electric-indigo),var(--color-soft-lilac))",
+                color: "var(--color-soft-lilac)",
+              }}
+            />
+          </div>
+          <p className="mt-1.5 truncate text-right text-xs text-outline">
+            {rodando ? (
+              <>
+                {progresso.feitos} processado(s)
+                {progresso.faltam > 0 && ` · ${progresso.faltam} na fila`}
+                {progresso.atual && ` · ${progresso.atual.slice(0, 30)}`}
+              </>
+            ) : (
+              <span className="text-primary">{progresso.feitos} e-mail(s) processado(s)</span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {erro && (
+        <p className="max-w-72 truncate text-right text-xs text-error" title={erro}>
+          {erro}
+        </p>
+      )}
     </div>
   );
 }
@@ -193,18 +210,20 @@ function Aba({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-md px-3 py-1.5 font-medium transition ${
-        ativa ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+      className={`flex items-center gap-2 rounded-full px-4 py-1.5 font-medium transition ${
+        ativa ? "text-mist-white" : "text-on-surface-variant hover:text-mist-white"
       }`}
+      style={
+        ativa
+          ? {
+              background: "linear-gradient(135deg,var(--color-electric-indigo),var(--color-soft-lilac))",
+              boxShadow: "0 0 18px -4px rgba(75,57,239,.6)",
+            }
+          : undefined
+      }
     >
       {children}
-      <span
-        className={`rounded-full px-1.5 text-xs tabular-nums ${
-          ativa ? "bg-stone-100 text-stone-600" : "text-stone-400"
-        }`}
-      >
-        {contagem}
-      </span>
+      <span className={`text-xs ${ativa ? "text-mist-white/75" : "text-outline"}`}>{contagem}</span>
     </button>
   );
 }
@@ -212,83 +231,74 @@ function Aba({
 function ListaCobrancas({ itens, faixa }: { itens: ItemFila[]; faixa: "revisar" | "auto_ok" }) {
   if (itens.length === 0)
     return (
-      <p className="rounded-lg border border-dashed border-stone-300 p-10 text-center text-sm text-stone-400">
+      <p className="glass rounded-lg p-12 text-center text-sm text-outline">
         {faixa === "revisar" ? "Nada pendente de revisão." : "Nada na faixa rápida."}
       </p>
     );
 
   return (
-    <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
-      <table className="w-full text-sm">
-        <thead className="border-b border-stone-200 bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
-          <tr>
-            <th className="px-4 py-2.5 font-medium">Fornecedor</th>
-            <th className="px-4 py-2.5 text-right font-medium">Valor</th>
-            <th className="px-4 py-2.5 font-medium">Vencimento</th>
-            <th className="px-4 py-2.5 font-medium">Confiança</th>
-            <th className="px-4 py-2.5 font-medium">Situação</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-stone-100">
-          {itens.map((item) => (
-            <tr key={item.id} className="transition hover:bg-stone-50">
-              <td className="px-4 py-3">
-                <Link href={`/conta/${item.id}`} className="block">
-                  <span className="font-medium text-stone-900">{item.fornecedor ?? "—"}</span>
-                  {item.recorrencia === "recorrente" && (
-                    <span className="ml-2 rounded bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-700 ring-1 ring-sky-200">
-                      recorrente
-                    </span>
-                  )}
-                  <span className="mt-0.5 block truncate text-xs text-stone-400">
-                    {item.email_assunto}
+    <div className="space-y-2">
+      {itens.map((item) => (
+        <Link
+          key={item.id}
+          href={`/conta/${item.id}`}
+          className="glass glass-hover block rounded-md px-5 py-4"
+        >
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium text-mist-white">{item.fornecedor ?? "—"}</span>
+                {item.recorrencia === "recorrente" && (
+                  <span className="chip border-soft-lilac/35 bg-soft-lilac/16 text-soft-lilac">
+                    recorrente
                   </span>
-                </Link>
-              </td>
-              <td className="px-4 py-3 text-right font-medium tnum">{brl(item.valor_centavos)}</td>
-              <td className="px-4 py-3 tnum">
-                <span className={item.urgente ? "font-medium text-red-700" : ""}>
-                  {dataBR(item.data_vencimento)}
-                </span>
+                )}
                 {item.urgente && (
-                  <span className="ml-1.5 rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700 ring-1 ring-red-200">
-                    urgente
-                  </span>
+                  <span className="chip border-error/35 bg-error/14 text-error">urgente</span>
                 )}
-              </td>
-              <td className="px-4 py-3">
-                <Confianca valor={item.confianca_geral} />
-              </td>
-              <td className="px-4 py-3">
-                {item.falhas_bloqueantes > 0 ? (
-                  <span className="text-amber-800">
-                    {item.falhas_bloqueantes} conferência(s) não fecharam
-                  </span>
-                ) : item.alertas > 0 ? (
-                  <span className="text-stone-500">{item.alertas} alerta(s)</span>
-                ) : (
-                  <span className="text-emerald-700">tudo conferido</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </div>
+              <p className="mt-1 truncate text-xs text-outline">{item.email_assunto}</p>
+            </div>
+
+            <div className="text-right">
+              <p className="headline-md text-[19px] text-mist-white">{brl(item.valor_centavos)}</p>
+              <p className="mt-0.5 text-xs text-outline">vence {dataBR(item.data_vencimento)}</p>
+            </div>
+
+            <div className="w-32">
+              <Confianca valor={item.confianca_geral} />
+            </div>
+
+            <div className="w-52 text-xs">
+              {item.falhas_bloqueantes > 0 ? (
+                <span className="text-tertiary">
+                  {item.falhas_bloqueantes} conferência(s) não fecharam
+                </span>
+              ) : item.alertas > 0 ? (
+                <span className="text-on-surface-variant">{item.alertas} alerta(s)</span>
+              ) : (
+                <span className="text-primary">tudo conferido</span>
+              )}
+            </div>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }
 
 /** Barra de confiança. Cor por faixa porque número solto ninguém interpreta rápido. */
 function Confianca({ valor }: { valor: number | null }) {
-  if (valor === null) return <span className="text-stone-400">—</span>;
+  if (valor === null) return <span className="text-xs text-outline">—</span>;
   const pct = Math.round(valor * 100);
-  const cor = pct >= 90 ? "bg-emerald-500" : pct >= 70 ? "bg-amber-500" : "bg-red-500";
+  const cor =
+    pct >= 90 ? "var(--color-primary)" : pct >= 70 ? "var(--color-tertiary)" : "var(--color-error)";
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-stone-200">
-        <div className={`h-full ${cor}`} style={{ width: `${pct}%` }} />
+      <div className="bar-track flex-1">
+        <div className="bar-fill" style={{ width: `${pct}%`, background: cor }} />
       </div>
-      <span className="text-xs tabular-nums text-stone-500">{pct}%</span>
+      <span className="text-xs text-outline">{pct}%</span>
     </div>
   );
 }
@@ -305,36 +315,34 @@ function ListaRuido({ itens, aoReclassificar }: { itens: ItemRuido[]; aoReclassi
 
   if (itens.length === 0)
     return (
-      <p className="rounded-lg border border-dashed border-stone-300 p-10 text-center text-sm text-stone-400">
+      <p className="glass rounded-lg p-12 text-center text-sm text-outline">
         Nenhum e-mail descartado.
       </p>
     );
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-stone-500">
+    <div className="space-y-4">
+      <p className="max-w-3xl text-sm text-on-surface-variant">
         O que a triagem descartou fica visível com o motivo. Um falso negativo aqui é uma
         conta perdida, e conta perdida vira multa — então nada é descartado em silêncio.
       </p>
-      <div className="divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-200 bg-white">
+      <div className="space-y-2">
         {itens.map((item) => (
-          <div key={item.email_id} className="flex items-start gap-4 p-4">
+          <div key={item.email_id} className="glass flex items-start gap-4 rounded-md px-5 py-4">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-stone-800">{item.assunto}</p>
-              <p className="mt-0.5 text-xs text-stone-400">
+              <p className="truncate text-sm font-medium text-on-surface">{item.assunto}</p>
+              <p className="mt-0.5 text-xs text-outline">
                 {item.remetente} · {dataBR(item.recebido_em)}
                 {item.anexos > 0 && ` · ${item.anexos} anexo(s)`}
               </p>
-              <p className="mt-1.5 text-sm text-stone-600">{item.justificativa}</p>
+              <p className="mt-2 text-sm text-on-surface-variant">{item.justificativa}</p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="text-xs tabular-nums text-stone-400">
-                {Math.round(item.confianca * 100)}%
-              </span>
+              <span className="text-xs text-outline">{Math.round(item.confianca * 100)}%</span>
               <button
                 onClick={() => reclassificar(item.email_id)}
                 disabled={ocupado === item.email_id}
-                className="rounded-md border border-stone-300 px-2.5 py-1 text-xs font-medium text-stone-700 transition hover:border-stone-400 hover:bg-stone-50 disabled:opacity-50"
+                className="btn-ghost px-3 py-1.5 text-xs"
               >
                 É uma conta
               </button>
