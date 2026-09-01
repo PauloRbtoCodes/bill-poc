@@ -16,12 +16,13 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from .config import USUARIO_FP, carregar
 from .store.db import BancoIndisponivel, conectar
 from .store.repositories import Repositorio
+from .validate.tempo import hoje as hoje_brasil
 
 cfg = carregar()
 
@@ -107,6 +108,49 @@ def reclassificar(email_id: str, repo: Repositorio = Repo) -> dict[str, Any]:
 def agenda(repo: Repositorio = Repo) -> list[dict[str, Any]]:
     """Aprovados e ainda não agendados, com a forma de pagamento junto."""
     return repo.agenda()
+
+
+@app.get("/api/agenda/exportar")
+def exportar_agenda(
+    formato: str = "csv",
+    dias: int | None = None,
+    repo: Repositorio = Repo,
+) -> Response:
+    """Exporta a agenda aprovada para planilha, ERP ou remessa bancária.
+
+    Copiar-e-colar a linha digitável resolve três contas; não resolve trinta. O CNAB é o
+    que substitui o agendamento manual conta a conta — sobe no banco e o lote inteiro é
+    agendado de uma vez.
+    """
+    from .exportar import Pagamento, para_cnab240, para_csv, para_erp, sem_linha_digitavel
+
+    linhas = repo.agenda()
+    if dias is not None:
+        linhas = [x for x in linhas if (x.get("dias_para_vencer") or 999) <= dias]
+    pagamentos = [Pagamento.da_agenda(x) for x in linhas]
+
+    hoje = hoje_brasil().isoformat()
+    if formato == "csv":
+        corpo, nome, tipo = para_csv(pagamentos), f"agenda-{hoje}.csv", "text/csv"
+    elif formato == "erp":
+        corpo, nome, tipo = para_erp(pagamentos), f"contas-a-pagar-{hoje}.csv", "text/csv"
+    elif formato == "cnab":
+        corpo = para_cnab240(
+            pagamentos, empresa="CLIENTE DEMO LTDA", cnpj_empresa="11222333000181"
+        )
+        nome, tipo = f"remessa-{hoje}.rem", "text/plain"
+    else:
+        raise HTTPException(422, f"formato desconhecido: {formato!r} (use csv, erp ou cnab)")
+
+    cabecalhos = {"Content-Disposition": f'attachment; filename="{nome}"'}
+    if formato == "cnab" and (fora := sem_linha_digitavel(pagamentos)):
+        # Quem não cabe no CNAB não pode sumir em silêncio: a UI avisa quantas contas
+        # continuam no fluxo manual.
+        cabecalhos["X-Pagamentos-Fora"] = str(len(fora))
+
+    # Latin-1 no CNAB: é o encoding que os bancos esperam no arquivo de remessa.
+    dados = corpo.encode("latin-1", errors="replace") if formato == "cnab" else corpo.encode("utf-8-sig")
+    return Response(content=dados, media_type=tipo, headers=cabecalhos)
 
 
 @app.get("/api/relatorio")

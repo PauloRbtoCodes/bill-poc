@@ -53,18 +53,21 @@ export default function Agenda() {
             {visiveis.length} conta(s) aprovada(s) · {brl(total)} a agendar
           </p>
         </div>
-        <div className="flex gap-1 rounded-lg bg-stone-100 p-1 text-sm">
-          {([7, 30, 0] as const).map((d) => (
-            <button
-              key={d}
-              onClick={() => setJanela(d)}
-              className={`rounded-md px-3 py-1.5 font-medium transition ${
-                janela === d ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
-              }`}
-            >
-              {d === 0 ? "Todas" : `${d} dias`}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <Exportar janela={janela} habilitado={visiveis.length > 0} />
+          <div className="flex gap-1 rounded-lg bg-stone-100 p-1 text-sm">
+            {([7, 30, 0] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setJanela(d)}
+                className={`rounded-md px-3 py-1.5 font-medium transition ${
+                  janela === d ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+                }`}
+              >
+                {d === 0 ? "Todas" : `${d} dias`}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -127,6 +130,58 @@ export default function Agenda() {
               </div>
             ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Exportação em lote.
+ *
+ * O copiar-e-colar por linha resolve três contas. Trinta é o volume de um cliente
+ * pequeno de verdade, e aí o caminho é o arquivo: CNAB sobe no banco e agenda o lote
+ * inteiro, o CSV vai para o contador, o layout de ERP entra no Conta Azul/Omie.
+ */
+function Exportar({ janela, habilitado }: { janela: number; habilitado: boolean }) {
+  const [aberto, setAberto] = useState(false);
+  const query = janela === 0 ? "" : `&dias=${janela}`;
+
+  const opcoes = [
+    { formato: "cnab", titulo: "Remessa CNAB 240", descricao: "para subir no internet banking" },
+    { formato: "csv", titulo: "Planilha (CSV)", descricao: "Excel e Google Sheets" },
+    { formato: "erp", titulo: "Layout de ERP", descricao: "Conta Azul / Omie" },
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setAberto((a) => !a)}
+        disabled={!habilitado}
+        className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-40"
+      >
+        Exportar ▾
+      </button>
+      {aberto && habilitado && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setAberto(false)} />
+          <div className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lg">
+            {opcoes.map((o) => (
+              <a
+                key={o.formato}
+                href={`/api/agenda/exportar?formato=${o.formato}${query}`}
+                onClick={() => setAberto(false)}
+                className="block border-b border-stone-100 px-3 py-2.5 text-left transition last:border-0 hover:bg-stone-50"
+              >
+                <span className="block text-sm font-medium text-stone-800">{o.titulo}</span>
+                <span className="block text-xs text-stone-400">{o.descricao}</span>
+              </a>
+            ))}
+            <p className="bg-stone-50 px-3 py-2 text-[11px] leading-snug text-stone-400">
+              O CNAB inclui só contas com boleto. Pix e transferência continuam no fluxo
+              manual, e seguem listados aqui.
+            </p>
+          </div>
+        </>
       )}
     </div>
   );
