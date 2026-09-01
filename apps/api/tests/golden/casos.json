@@ -1,0 +1,104 @@
+{
+  "_sobre": "Rótulos conferidos à mão contra os documentos da caixa financeiro.test@gmail.com. 'valor' e 'vencimento' só são preenchidos quando o dado é verificável no e-mail ou no anexo; onde o documento não permite conferir (link externo, PDF cifrado), ficam null e o teste ignora aquele campo.",
+  "_rotulado_em": "2026-09-01",
+  "casos": [
+    {
+      "arquivo": "1a03e45751c8a3f2",
+      "descricao": "Enel — conta de energia, PDF cifrado mas linha digitável no corpo",
+      "e_cobranca": true,
+      "fornecedor": "Enel",
+      "valor": "43.71",
+      "vencimento": "2026-09-04"
+    },
+    {
+      "arquivo": "1a03e45dadfa37fd",
+      "descricao": "LELLO Condomínios — boleto por link, valor e vencimento na tabela do corpo",
+      "e_cobranca": true,
+      "fornecedor": "LELLO CONDOMINIOS LTDA",
+      "valor": "415.11",
+      "vencimento": "2026-09-10"
+    },
+    {
+      "arquivo": "1a03e463eb1f41e2",
+      "descricao": "Lord Fibra — mensalidade de internet, boleto em PDF anexo",
+      "e_cobranca": true,
+      "fornecedor": "LORD SERVICO DE INTERNET FIBRA OTICA LTDA",
+      "valor": "89.90",
+      "vencimento": "2026-08-10"
+    },
+    {
+      "arquivo": "1a03e46a9a6ad728",
+      "descricao": "MAC Ibirapuera — boleto por link; vencimento no assunto, valor não conferível",
+      "e_cobranca": true,
+      "fornecedor": "MAC",
+      "valor": null,
+      "vencimento": "2026-08-10"
+    },
+    {
+      "arquivo": "1a03e471ee9b6cdf",
+      "descricao": "Starfiber — lembrete de cobrança de internet",
+      "e_cobranca": true,
+      "fornecedor": "STARFIBER INTERNET",
+      "valor": "89.90",
+      "vencimento": "2026-06-15"
+    },
+    {
+      "arquivo": "1a03e4861a8af67c",
+      "descricao": "PDF protegido por senha — deve virar cobrança em revisão, sem campos inventados",
+      "e_cobranca": true,
+      "fornecedor": null,
+      "valor": null,
+      "vencimento": null
+    },
+    {
+      "arquivo": "1a03e46ccf061dce",
+      "descricao": "Enel — marketing sobre WhatsApp. Remetente é fornecedor real, mas não há cobrança: o caso difícil da triagem",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "1a05921d12b1b0aa",
+      "descricao": "Alerta de segurança do Google",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "1a03ef93147ad8c2",
+      "descricao": "Recuperação de conta do Google",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "1a04f6bc9ff16e85",
+      "descricao": "Link de verificação de e-mail",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "19efda6fa19a69d9",
+      "descricao": "Atualização de termos de serviço",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "19e2cad1105fa00c",
+      "descricao": "Pedido interno de conciliação com planilha e extrato anexos — tem anexo financeiro mas não é conta a pagar",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "19e40cb39917d7b0",
+      "descricao": "Conciliação de março com anexos — mesmo caso",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "19e29756cdf89a02",
+      "descricao": "Relatório automático de conciliação bancária",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "19e296bbc5975df4",
+      "descricao": "Aviso de período já conciliado",
+      "e_cobranca": false
+    },
+    {
+      "arquivo": "19e2340333f04c03",
+      "descricao": "Aviso de conciliação não processada por falta de anexos",
+      "e_cobranca": false
+    }
+  ]
+}

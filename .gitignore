@@ -33,3 +33,6 @@ out/
 # Storage local de anexos e cache de respostas de LLM
 .storage/
 .cache/
+
+# Anexos e e-mails reais ficam fora; os RÓTULOS do golden set são versionados
+!apps/api/tests/golden/casos.json

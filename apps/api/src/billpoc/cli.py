@@ -357,6 +357,113 @@ def report() -> None:
 
 
 @app.command()
+def golden() -> None:
+    """Mede a acurácia contra o golden set de casos rotulados à mão.
+
+    O mesmo cálculo que roda em `pytest tests/test_golden.py`, mas imprimindo os números
+    em vez de só passar ou falhar — é o que se olha ao mexer no prompt.
+    """
+    import json as _json
+
+    from .extract.claude import Extrator as _Extrator
+    from .extract.claude import SemCredencial as _Sem
+    from .pipeline import Pipeline as _Pipeline
+
+    cfg = _cfg()
+    caminho = config_mod.RAIZ / "apps" / "api" / "tests" / "golden" / "casos.json"
+    if not caminho.exists():
+        console.print(f"[red]golden set não encontrado em {caminho}[/]")
+        raise typer.Exit(1)
+
+    casos = {c["arquivo"]: c for c in _json.loads(caminho.read_text())["casos"]}
+    extrator = _Extrator(
+        modelo_triagem=cfg.modelo_triagem,
+        modelo_extracao=cfg.modelo_extracao,
+        cache_dir=cfg.cache_dir,
+        somente_cache=True,
+    )
+
+    linhas: list[tuple[str, str, str, str]] = []
+    acertos = {"triagem": 0, "valor": [0, 0], "vencimento": [0, 0]}
+    perdidas: list[str] = []
+
+    with conectar(cfg.database_url) as conexao:
+        with conexao.cursor() as cur:
+            cur.execute("insert into orgs (nome) values ('golden-cli') returning id")
+            org = str(cur.fetchone()["id"])
+            cur.execute(
+                "insert into expense_categories (org_id, codigo, nome) "
+                "select %s, codigo, nome from expense_categories where org_id=%s",
+                (org, config_mod.ORG_DEMO),
+            )
+        repo = Repositorio(conexao, org)
+        pipeline = _Pipeline(cfg, repo, extrator)
+
+        for email in EmlSource(cfg.fixtures_dir).listar():
+            caso = casos.get(email.message_id)
+            if caso is None:
+                continue
+            try:
+                r = pipeline.processar(email)
+            except _Sem:
+                linhas.append((caso["descricao"][:38], "—", "sem cache", ""))
+                continue
+
+            obtido_cobranca = bool(r.triagem and not r.e_ruido)
+            triagem_ok = obtido_cobranca == caso["e_cobranca"]
+            acertos["triagem"] += triagem_ok
+            if caso["e_cobranca"] and not obtido_cobranca:
+                perdidas.append(caso["descricao"])
+
+            detalhe = ""
+            if caso["e_cobranca"] and r.conciliacoes:
+                campos = r.conciliacoes[0].campos
+                for chave, nome in (("valor", "valor"), ("vencimento", "data_vencimento")):
+                    if caso.get(chave) is None:
+                        continue
+                    acertos[chave][1] += 1
+                    obtido = campos.get(nome)
+                    val = obtido.valor if obtido else None
+                    # Dinheiro compara como Decimal: "89.9" e "89.90" são o mesmo valor.
+                    ok = val is not None and (
+                        Decimal(str(val)) == Decimal(caso[chave])
+                        if chave == "valor"
+                        else val.isoformat() == caso[chave]
+                    )
+                    acertos[chave][0] += ok
+                    if not ok:
+                        detalhe += f" {chave}: esperado {caso[chave]}, obtido {val};"
+
+            linhas.append((
+                caso["descricao"][:38],
+                "cobrança" if caso["e_cobranca"] else "ruído",
+                "[green]ok[/]" if triagem_ok else "[red]ERRO[/]",
+                detalhe or ("[green]campos ok[/]" if caso["e_cobranca"] else ""),
+            ))
+        conexao.rollback()
+
+    tabela = Table("Caso", "Esperado", "Triagem", "Campos", title="Golden set", title_justify="left")
+    for linha in linhas:
+        tabela.add_row(*linha)
+    console.print(tabela)
+
+    total = len(linhas)
+    resumo = Table.grid(padding=(0, 2))
+    resumo.add_row("Triagem correta", f"{acertos['triagem']}/{total}")
+    for chave in ("valor", "vencimento"):
+        certos, avaliados = acertos[chave]
+        if avaliados:
+            resumo.add_row(f"{chave.capitalize()} correto", f"{certos}/{avaliados}")
+    # A métrica que mais importa: cobrança classificada como ruído some da fila e
+    # ninguém descobre até chegar a multa.
+    resumo.add_row(
+        "Cobranças perdidas",
+        "[green]nenhuma[/]" if not perdidas else f"[red]{len(perdidas)}[/] — {perdidas}",
+    )
+    console.print(Panel(resumo, title="Acurácia", title_align="left"))
+
+
+@app.command()
 def inspecionar(payable_id: str) -> None:
     """Mostra a trilha completa de uma conta: campo, origem, evidência e verificações."""
     cfg = _cfg()
