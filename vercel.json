@@ -2,19 +2,20 @@
   "version": 2,
   "builds": [
     {
+      "src": "apps/web/package.json",
+      "use": "@vercel/next"
+    },
+    {
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
         "includeFiles": "apps/api/src/**",
         "maxLambdaSize": "50mb"
       }
-    },
-    {
-      "src": "apps/web/package.json",
-      "use": "@vercel/next"
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.py" }
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "handle": "filesystem" }
   ]
 }
