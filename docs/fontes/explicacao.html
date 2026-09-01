@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Como funciona</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1a1a1a;
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 22pt; font-weight: 700; letter-spacing: -0.02em;
+    margin: 0 0 4pt; color: #2f22a8;
+  }
+  .sub { color: #666; font-size: 11pt; margin: 0 0 20pt; }
+
+  h2 {
+    font-size: 13pt; font-weight: 700; letter-spacing: -0.01em;
+    margin: 22pt 0 8pt; padding-bottom: 4pt;
+    border-bottom: 1.5px solid #4b39ef; color: #2f22a8;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt; font-weight: 700; margin: 14pt 0 5pt; color: #111;
+    page-break-after: avoid;
+  }
+
+  p { margin: 0 0 8pt; }
+  ul { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin-bottom: 3pt; }
+
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9pt; background: #f0eefc; padding: 1px 4px; border-radius: 3px;
+  }
+
+  .destaque {
+    background: #f4f2ff; border-left: 3px solid #4b39ef;
+    padding: 10pt 12pt; margin: 10pt 0; page-break-inside: avoid;
+  }
+  .destaque p:last-child { margin-bottom: 0; }
+
+  .alerta {
+    background: #fff4ef; border-left: 3px solid #d9612c;
+    padding: 10pt 12pt; margin: 10pt 0; page-break-inside: avoid;
+  }
+  .alerta p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0 12pt; font-size: 9.5pt; }
+  th {
+    text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em;
+    color: #666; border-bottom: 1px solid #ccc; padding: 4pt 6pt 4pt 0; font-weight: 600;
+  }
+  td { padding: 5pt 6pt 5pt 0; border-bottom: 1px solid #eee; vertical-align: top; }
+  td:first-child { white-space: nowrap; }
+
+  .fluxo {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt;
+    background: #1a1730; color: #e8e6ff; padding: 12pt; border-radius: 5px;
+    margin: 10pt 0; white-space: pre; line-height: 1.5; page-break-inside: avoid;
+  }
+  .fluxo .hl { color: #a8a2ff; }
+
+  .etapa { page-break-inside: avoid; margin-bottom: 14pt; }
+  .num {
+    display: inline-block; width: 17pt; height: 17pt; line-height: 17pt;
+    text-align: center; border-radius: 50%; background: #4b39ef; color: #fff;
+    font-weight: 700; font-size: 9pt; margin-right: 6pt;
+  }
+
+  .quebra { page-break-before: always; }
+  .fim { margin-top: 20pt; padding-top: 8pt; border-top: 1px solid #ddd;
+         font-size: 8.5pt; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>Contas a pagar por e-mail</h1>
+<p class="sub">Como o sistema funciona — POC para o desafio Bill</p>
+
+<div class="destaque">
+  <p><strong>A ideia em uma frase:</strong> um LLM lê os documentos, porque é bom em ler
+  layouts que nunca viu. Mas ele <strong>não decide sozinho onde há dinheiro</strong> —
+  valor e vencimento são conferidos por aritmética.</p>
+</div>
+
+<h2>Por que isso importa</h2>
+
+<p>Um modelo pode devolver <strong>R$ 987,00</strong> num boleto de
+<strong>R$ 9.870,00</strong>. Está errado, mas parece certo — ninguém percebe numa fila
+de 200 contas. O fornecedor não recebe e a empresa toma multa.</p>
+
+<p>A saída é que, num boleto brasileiro, <strong>valor e vencimento não precisam ser
+lidos</strong>: eles estão matematicamente codificados na linha digitável.</p>
+
+<div class="fluxo">34191.79001  01043.51004  79102.015000  8  <span class="hl">1157</span> <span class="hl">0000012345 6</span>
+                                                <span class="hl">└─┬─┘</span> <span class="hl">└────┬─────┘</span>
+                                                  │           │
+                            fator de vencimento ──┘           └── valor em centavos
+                            (dias desde 07/10/1997)               123456 = R$ 1.234,56</div>
+
+<p>E existem <strong>cinco dígitos verificadores</strong> que provam que a própria linha
+não foi transcrita errada — a mesma matemática de um CPF.</p>
+
+<div class="destaque">
+  <p><strong>Então: o LLM lê, a aritmética confere.</strong> Se os dois discordam,
+  ninguém decide sozinho — vai para revisão humana com os dois valores lado a lado.</p>
+</div>
+
+<h2>O caminho de um e-mail</h2>
+
+<div class="fluxo">1. CAPTURA  →  2. TRIAGEM  →  3. EXTRAÇÃO  →  4. VALIDAÇÃO  →  5. HISTÓRICO  →  6. GRAVAÇÃO
+   Gmail API     é cobrança?    lê o PDF        confere a         aprende          salva tudo
+                                                matemática                          junto</div>
+
+<div class="etapa">
+  <h3><span class="num">1</span>Captura</h3>
+  <p>Conecta no Gmail e baixa os e-mails. Cada um é gravado com um identificador único —
+  rodar de novo <strong>não duplica nada</strong>.</p>
+</div>
+
+<div class="etapa">
+  <h3><span class="num">2</span>Triagem — "isso é uma conta a pagar?"</h3>
+  <p>Um modelo <strong>barato</strong> lê só o cabeçalho, o corpo e os <em>nomes</em> dos
+  anexos. Não abre o PDF ainda.</p>
+  <p>Por quê? Na caixa real, <strong>87% é ruído</strong> — alerta do Google, verificação
+  de e-mail, newsletter. Abrir PDF no modelo caro para descobrir que era spam seria
+  queimar dinheiro.</p>
+  <p>Resultado: <em>é cobrança (sim/não)</em> + <em>confiança</em> + <strong>o motivo por
+  escrito</strong>.</p>
+</div>
+
+<div class="etapa">
+  <h3><span class="num">3</span>Extração — só no que passou</h3>
+  <p>Aqui entra o modelo <strong>caro</strong>, com o PDF inteiro. Ele devolve, por campo:
+  o valor que leu, quanta confiança tem, <strong>e o trecho exato do documento onde
+  leu</strong>.</p>
+  <p>Esse último item é o que segura a alucinação: o modelo tem que apontar onde viu.</p>
+
+  <table>
+    <tr><th>Caminho</th><th>Quando</th></tr>
+    <tr><td><strong>1º XML da NF-e</strong></td>
+        <td>O fornecedor anexou o XML fiscal. Lê direto, <strong>zero LLM</strong></td></tr>
+    <tr><td><strong>2º Varredura</strong></td>
+        <td>Achou a linha digitável no texto do PDF. Ninguém transcreveu, então não há o
+            que estar errado</td></tr>
+    <tr><td><strong>3º LLM</strong></td>
+        <td>O resto</td></tr>
+  </table>
+</div>
+
+<div class="etapa">
+  <h3><span class="num">4</span>Validação — a matemática confere</h3>
+  <p>Pega a linha digitável e <strong>calcula</strong> valor e vencimento. Compara com o
+  que o LLM leu:</p>
+  <ul>
+    <li><strong>Bateu</strong> → grava e marca como faixa rápida</li>
+    <li><strong>Não bateu</strong> → grava <strong>o valor da aritmética</strong> e manda
+        para revisão, mostrando os dois lado a lado</li>
+    <li><strong>Não há como conferir</strong> (uma NF sem boleto, por exemplo) → grava o
+        do LLM, marcado como não corroborado</li>
+  </ul>
+  <p>Também confere: dígito do CNPJ, chave da NF-e, CRC do Pix, e <strong>se é
+  duplicata</strong> — o mesmo boleto chega três vezes: original, lembrete e segunda
+  via.</p>
+</div>
+
+<div class="etapa">
+  <h3><span class="num">5</span>Histórico — o sistema melhora com o uso</h3>
+  <ul>
+    <li>Fornecedor com 3 cobranças em meses seguidos → marcado <strong>recorrente</strong>
+        (fato aritmético, não palpite do modelo)</li>
+    <li>Categoria corrigida por um humano uma vez → <strong>todas as próximas entram
+        certas</strong></li>
+    <li>Valor fugiu da média do fornecedor → <strong>alerta</strong></li>
+  </ul>
+</div>
+
+<div class="etapa">
+  <h3><span class="num">6</span>Gravação</h3>
+  <p>Salva no Postgres em <strong>uma transação só</strong>: a conta a pagar e toda a
+  trilha de auditoria juntas. Nunca existe conta salva sem a explicação de como
+  nasceu.</p>
+</div>
+
+<div class="quebra"></div>
+
+<h2>O que fica guardado</h2>
+
+<p>São <strong>dois mundos separados</strong>, porque respondem perguntas diferentes e
+têm ciclos de vida diferentes.</p>
+
+<h3>Mundo ERP — "o que eu tenho a pagar?"</h3>
+<table>
+  <tr><td><code>payables</code></td><td>a conta a pagar (o registro central)</td></tr>
+  <tr><td><code>vendors</code></td><td>fornecedor, chaveado por CNPJ</td></tr>
+  <tr><td><code>payment_instruments</code></td><td>linha digitável, Pix, dados bancários</td></tr>
+  <tr><td><code>payment_schedules</code></td><td>o agendamento feito no banco, com protocolo</td></tr>
+</table>
+
+<h3>Mundo Auditoria — "por que o sistema acha isso?"</h3>
+<table>
+  <tr><td><code>email_messages</code></td><td>o e-mail que chegou</td></tr>
+  <tr><td><code>processing_steps</code></td><td>custo, tokens e latência de cada etapa</td></tr>
+  <tr><td><code>classifications</code></td><td>a triagem — inclusive do que virou ruído</td></tr>
+  <tr><td><code>field_extractions</code></td><td><strong>o coração</strong> — ver abaixo</td></tr>
+  <tr><td><code>validation_results</code></td><td>cada verificação, com esperado × encontrado</td></tr>
+  <tr><td><code>review_actions</code></td><td>quem mudou o quê, de que valor para qual</td></tr>
+</table>
+
+<div class="destaque">
+  <p><strong><code>field_extractions</code> responde, para qualquer número na tela:</strong>
+  de onde veio, com que confiança, e qual trecho do documento sustenta aquilo.</p>
+  <p>É <em>append-only</em>: quando você corrige um campo, a leitura do modelo
+  <strong>não é apagada</strong> — fica lá, e a correção entra como linha nova. Por isso
+  o histórico mostra "R$ 100,00 → R$ 250,00".</p>
+</div>
+
+<h2>As três telas</h2>
+
+<table>
+  <tr><th>Tela</th><th>O que faz</th></tr>
+  <tr>
+    <td><strong>Caixa de<br>entrada</strong></td>
+    <td>Três abas: <strong>Revisar</strong> (precisa de decisão humana),
+        <strong>Pronto</strong> (tudo conferido) e <strong>Ruído</strong> (o descartado,
+        com o motivo e um botão "é uma conta")</td>
+  </tr>
+  <tr>
+    <td><strong>Revisão</strong></td>
+    <td>PDF à esquerda, campos à direita. Cada campo traz o selo de origem:
+        🔒 conferido por aritmética · 🤖 lido pelo modelo · ✏️ corrigido por humano ·
+        📊 histórico do fornecedor. Conflito aparece com os dois valores lado a lado</td>
+  </tr>
+  <tr>
+    <td><strong>Agenda</strong></td>
+    <td>Aprovados agrupados por vencimento. Copia a linha digitável, você paga no banco,
+        volta e registra o protocolo. Ou exporta CNAB 240 para o lote inteiro</td>
+  </tr>
+</table>
+
+<div class="alerta">
+  <p><strong>Nada paga sozinho.</strong> "Faixa rápida" significa apenas <em>não precisa
+  de atenção especial na fila</em> — não significa autorizado. Toda conta passa por um
+  humano antes de virar agendamento.</p>
+</div>
+
+<h2>Resultado sobre a caixa real</h2>
+
+<table>
+  <tr><td><strong>48</strong></td><td>e-mails processados</td></tr>
+  <tr><td><strong>42</strong></td><td>ruído descartado (87%)</td></tr>
+  <tr><td><strong>6</strong></td><td>cobranças identificadas</td></tr>
+  <tr><td><strong>0</strong></td><td>erros</td></tr>
+  <tr><td><strong>US$ 0,36</strong></td><td>custo total de LLM</td></tr>
+  <tr><td><strong>100%</strong></td><td>acurácia no conjunto rotulado à mão
+      (triagem 16/16, valor 4/4, vencimento 5/5)</td></tr>
+</table>
+
+<p class="fim">
+  Repositório: github.com/PauloRbtoCodes/bill-poc &nbsp;·&nbsp;
+  No ar: bill-poc.vercel.app
+</p>
+
+</body>
+</html>

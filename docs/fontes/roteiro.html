@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Roteiro da call</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt; line-height: 1.5; color: #1a1a1a; margin: 0;
+  }
+
+  h1 { font-size: 21pt; font-weight: 700; letter-spacing: -.02em; margin: 0 0 3pt; color: #2f22a8; }
+  .sub { color: #666; font-size: 10.5pt; margin: 0 0 6pt; }
+  .link { font-size: 9pt; color: #4b39ef; margin: 0 0 18pt; }
+
+  h2 {
+    font-size: 12.5pt; font-weight: 700; margin: 20pt 0 8pt; padding-bottom: 4pt;
+    border-bottom: 1.5px solid #4b39ef; color: #2f22a8; page-break-after: avoid;
+  }
+  h2 .t { float: right; font-size: 9pt; font-weight: 500; color: #888; }
+
+  h3 { font-size: 10.5pt; font-weight: 700; margin: 12pt 0 4pt; color: #111; page-break-after: avoid; }
+
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin-bottom: 3pt; }
+
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt;
+    background: #f0eefc; padding: 1px 4px; border-radius: 3px;
+  }
+  pre {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt;
+    background: #1a1730; color: #e8e6ff; padding: 9pt 11pt; border-radius: 4px;
+    margin: 6pt 0 9pt; white-space: pre-wrap; line-height: 1.45; page-break-inside: avoid;
+  }
+
+  /* Fala: o que dizer em voz alta */
+  .fala {
+    border-left: 3px solid #4b39ef; background: #f4f2ff;
+    padding: 8pt 11pt; margin: 7pt 0; font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  .fala::before {
+    content: "DIGA"; display: block; font-size: 7pt; font-weight: 700;
+    letter-spacing: .1em; color: #4b39ef; margin-bottom: 3pt;
+  }
+  .fala p { margin: 0 0 5pt; }
+  .fala p:last-child { margin: 0; }
+
+  .aviso {
+    border-left: 3px solid #d9612c; background: #fff4ef;
+    padding: 8pt 11pt; margin: 7pt 0; font-size: 9.5pt; page-break-inside: avoid;
+  }
+  .aviso p:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 10pt; font-size: 9pt; }
+  th {
+    text-align: left; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .06em;
+    color: #666; border-bottom: 1px solid #ccc; padding: 3pt 6pt 3pt 0; font-weight: 600;
+  }
+  td { padding: 4pt 6pt 4pt 0; border-bottom: 1px solid #eee; vertical-align: top; }
+
+  .quebra { page-break-before: always; }
+  .check { list-style: none; padding-left: 0; }
+  .check li { padding-left: 16pt; position: relative; }
+  .check li::before {
+    content: "☐"; position: absolute; left: 0; color: #4b39ef; font-size: 11pt;
+  }
+</style>
+</head>
+<body>
+
+<h1>Roteiro da call</h1>
+<p class="sub">Desafio AI Engineer — Bill · ~15 min de apresentação + código junto</p>
+<p class="link">bill-poc.vercel.app &nbsp;·&nbsp; github.com/PauloRbtoCodes/bill-poc</p>
+
+<h2>Antes de começar <span class="t">5 min, sozinho</span></h2>
+
+<ul class="check">
+  <li>Abrir <strong>bill-poc.vercel.app</strong> e confirmar que carrega</li>
+  <li>Abrir o repositório no editor</li>
+  <li>Terminal aberto em <code>~/Documentos/case-bill/apps/api</code></li>
+  <li>Mandar o link no chat da call logo no início</li>
+</ul>
+
+<p>Se quiser rodar local também: <code>docker compose up -d</code>, depois
+<code>uv run uvicorn billpoc.api:app --port 8000</code> num terminal e
+<code>npm run dev</code> na raiz em outro.</p>
+
+<div class="aviso">
+  <p><strong>Não rode <code>npm run build</code> com o dev server de pé</strong> — os dois
+  compartilham <code>.next</code> e o dev quebra. Se acontecer:
+  <code>rm -rf .next</code> e reinicie.</p>
+</div>
+
+<h2>1. A tese, antes de qualquer código <span class="t">2 min</span></h2>
+
+<div class="fala">
+  <p>"Antes de mostrar rodando, a ideia central em uma frase: <strong>num boleto
+  brasileiro, valor e vencimento não precisam ser confiados ao LLM — eles estão
+  aritmeticamente codificados na linha digitável.</strong> Então dá para <em>conferir</em>
+  em vez de <em>confiar</em>."</p>
+</div>
+
+<p>Mostre no terminal:</p>
+
+<pre>uv run python -c "
+from billpoc.validate.boleto import decodificar
+b = decodificar('34191790010104351004791020150008115700000123456')
+print('valor     ', b.valor)
+print('vencimento', b.vencimento)
+print('válido    ', b.valido)
+"</pre>
+
+<div class="fala">
+  <p>"Isso é aritmética pura, sem modelo nenhum. O LLM continua fazendo o trabalho
+  difícil — ler PDF de layout desconhecido, decidir se é cobrança ou ruído, categorizar.
+  Mas nos dois campos onde errar custa dinheiro, existe um piso."</p>
+</div>
+
+<p><em>Se perguntarem "e quando não tem código de barras?" → a resposta está no passo 4.</em></p>
+
+<h2>2. Rodando sobre a caixa real <span class="t">3 min</span></h2>
+
+<pre>uv run billpoc run --fonte eml</pre>
+
+<p>Aponte o resumo: <strong>48 e-mails · 42 ruído · 6 cobranças · 0 erros ·
+US$ 0,36</strong>.</p>
+
+<div class="fala">
+  <p>"87% da caixa é ruído. Por isso a triagem roda num modelo barato sobre cabeçalho e
+  corpo, sem abrir PDF — e só o que passa vai para o modelo caro com o documento inteiro.
+  É o que faz o custo por e-mail ficar de pé em escala."</p>
+</div>
+
+<p>Depois, a acurácia:</p>
+
+<pre>uv run billpoc golden</pre>
+
+<div class="fala">
+  <p>"16 casos rotulados à mão. Os pisos são assimétricos de propósito: recall exige 100%,
+  precisão aceita 90%. Um falso positivo o revisor descarta em dois minutos; um falso
+  negativo some, a conta não é paga, e o cliente descobre pela multa."</p>
+</div>
+
+<h2>3. O que a caixa real ensinou <span class="t">2 min</span></h2>
+
+<p>Este é o trecho que separa de uma POC com dados fabricados.</p>
+
+<div class="fala">
+  <p>"Três coisas que só apareceram porque rodei nos e-mails de verdade:"</p>
+</div>
+
+<ol>
+  <li><strong>Todas as cobranças chegam encaminhadas</strong> da mesma pessoa. O
+  <code>From</code> é do encaminhador. Sem tratar isso, os seis boletos casariam com um
+  "fornecedor" de domínio gmail.com.</li>
+  <li><strong>Dois dos seis PDFs são protegidos por senha.</strong> Num deles a linha
+  digitável estava no corpo, e a varredura determinística resolveu sem abrir o PDF.</li>
+  <li><strong>O mesmo provedor aparece com dois nomes</strong> (Starfiber e Lord Fibra) —
+  é por isso que o casamento de fornecedor é por CNPJ, não por nome.</li>
+</ol>
+
+<div class="quebra"></div>
+
+<h2>4. A tela — e o momento que importa <span class="t">4 min</span></h2>
+
+<p>Abra <strong>bill-poc.vercel.app</strong>.</p>
+
+<h3>Caixa de entrada</h3>
+<p>Três faixas. Mostre a aba <strong>Ruído</strong> e a justificativa de cada descarte.</p>
+
+<div class="fala">
+  <p>"O ruído fica visível de propósito, com o motivo e um botão para contestar.
+  Descartar em silêncio é criar um falso negativo que ninguém descobre."</p>
+</div>
+
+<h3>Revisão — abra a Starfiber ou a Lord Fibra</h3>
+<p>Aponte os selos de origem ao lado de cada campo.</p>
+
+<div class="fala">
+  <p>"Esta é a informação mais importante da tela. 🔒 quer dizer que o número foi
+  conferido por aritmética; 🤖 que foi lido pelo modelo. Sem essa distinção o revisor
+  confere tudo com o mesmo cuidado, que é o mesmo que não conferir nada."</p>
+</div>
+
+<p>Repare que <strong>valor</strong> está 🔒 e <strong>vencimento</strong> está 🤖:</p>
+
+<div class="fala">
+  <p>"O formato codifica o valor mas não o vencimento — e o sistema <em>sabe</em> que não
+  pode conferir a data. Por isso caiu em revisão mesmo com o valor confirmado. Essa é a
+  resposta para 'e quando não tem como conferir': não quebra, escala de confiança."</p>
+</div>
+
+<h3>O conflito — use a caixa de demonstração</h3>
+<pre>uv run billpoc semear
+uv run billpoc run --fonte demo --somente-cache</pre>
+<p>Abra a <strong>Norte Logística</strong>: o modelo lê R$ 987,00, o código de barras diz
+R$ 9.870,00. Os dois aparecem lado a lado, com o determinístico já gravado.</p>
+
+<h3>O aprendizado — Limpeza Total</h3>
+<p>Quatro mensalidades do mesmo fornecedor. Abra a de setembro e mostre
+<strong>Recorrência</strong>.</p>
+
+<div class="fala">
+  <p>"As três primeiras saíram como 'único' com selo 🤖 — o modelo lê um documento
+  isolado e não tem como saber. A quarta virou 'recorrente' com selo 📊 e a evidência
+  'três cobranças anteriores em cadência mensal'. O sistema fica melhor com o uso, e não
+  por treinar nada: o histórico é determinístico."</p>
+</div>
+
+<h3>Agenda</h3>
+<p>Agrupamento por vencimento e o botão <strong>Exportar → CNAB 240</strong>.</p>
+
+<div class="fala">
+  <p>"Copiar-e-colar resolve três contas. Trinta é o volume de um cliente pequeno de
+  verdade, e aí o caminho é subir um arquivo de remessa no banco."</p>
+</div>
+
+<h2>5. Mexer no código junto <span class="t">o resto do tempo</span></h2>
+
+<p>Três lugares bons, do mais simples ao mais interessante:</p>
+
+<h3>a) Um limiar da política</h3>
+<p><code>apps/api/src/billpoc/validate/rules.py</code>, no topo:</p>
+<pre>LIMIAR_TRIAGEM = 0.85
+LIMIAR_CAMPO   = 0.70</pre>
+<p>Baixar <code>LIMIAR_CAMPO</code> para 0.4 e rodar de novo mostra contas saindo da
+revisão. Boa conversa sobre onde calibrar.</p>
+
+<h3>b) O prompt</h3>
+<p><code>apps/api/src/billpoc/extract/prompts.py</code>. Mexer nele muda o
+<code>PROMPT_VERSION</code>, o cache é invalidado, e <code>billpoc golden</code> mede se
+melhorou ou piorou. É a demonstração do ciclo de iteração.</p>
+
+<h3>c) A tolerância do alerta de valor</h3>
+<p><code>apps/api/src/billpoc/enrich.py</code>:</p>
+<pre>MINIMO_PARA_RECORRENCIA = 3
+TOLERANCIA_PADRAO = Decimal("15.0")</pre>
+<p>Baixar para 2% faz aparecer alerta em variação normal de conta de consumo — boa
+conversa sobre o limite entre sinal e ruído.</p>
+
+<div class="quebra"></div>
+
+<h2>Perguntas prováveis</h2>
+
+<table>
+  <tr><th style="width:38%">Pergunta</th><th>Resposta curta</th></tr>
+  <tr>
+    <td>"Por que não usou IMAP?"</td>
+    <td>Testei; o Google recusa senha de conta desde 2022. OAuth é também o caminho de produção.</td>
+  </tr>
+  <tr>
+    <td>"Isso escala para 100 clientes?"</td>
+    <td>OAuth por caixa não escala. Um endereço de encaminhamento por cliente elimina o
+        consentimento e funciona em qualquer provedor. <code>MailSource</code> já é a interface.</td>
+  </tr>
+  <tr>
+    <td>"Quanto custa?"</td>
+    <td>US$ 0,36 para 48 e-mails. <code>billpoc report</code> quebra por etapa e modelo.</td>
+  </tr>
+  <tr>
+    <td>"E se o modelo alucinar?"</td>
+    <td>Nos campos com código de barras, é detectado. Nos outros, cai em revisão por falta
+        de corroboração. Nada paga sozinho.</td>
+  </tr>
+  <tr>
+    <td>"Por que não um agente?"</td>
+    <td>Extrair campos é uma chamada com schema estrito, não um loop. Agente aqui adiciona
+        não-determinismo sem adicionar capacidade.</td>
+  </tr>
+  <tr>
+    <td>"Como sabe que uma mudança melhorou?"</td>
+    <td><code>billpoc golden</code>. Sem isso é opinião.</td>
+  </tr>
+  <tr>
+    <td>"E prompt injection?"</td>
+    <td>O prompt trata documento como dado, e a política de decisão está em código, não no
+        prompt. Um PDF não consegue se auto-aprovar.</td>
+  </tr>
+  <tr>
+    <td>"Por que Postgres e não planilha?"</td>
+    <td>A auditoria é relacional: um payable tem N campos extraídos, N verificações e N
+        ações de revisão. Em abas isso vira cópia manual.</td>
+  </tr>
+</table>
+
+<h2>Se algo der errado ao vivo</h2>
+
+<table>
+  <tr><th style="width:38%">Sintoma</th><th>O que fazer</th></tr>
+  <tr><td>Site fora do ar</td><td>Rodar local: a demo inteira funciona em localhost</td></tr>
+  <tr><td>API não responde</td><td><code>uv run billpoc doctor</code> mostra o que caiu</td></tr>
+  <tr><td>Sem chave / sem rede</td><td><code>uv run billpoc run --fonte demo --somente-cache</code></td></tr>
+  <tr><td>Banco sujo</td><td><code>truncate email_messages, vendors cascade;</code> e rodar de novo</td></tr>
+  <tr><td>Resetar tudo</td><td><code>docker compose down -v &amp;&amp; docker compose up -d &amp;&amp; uv run billpoc initdb</code></td></tr>
+</table>
+
+<h2>Contexto sobre a empresa</h2>
+
+<p>O site é <strong>oibill.ai</strong> (oibill.com.br redireciona). O produto público é um
+assistente no WhatsApp para <strong>contas a receber</strong> — cobrança recorrente de
+clientes.</p>
+
+<div class="fala">
+  <p>"Vi que o produto de vocês hoje é o lado do <em>receber</em>; isto aqui é o
+  <em>pagar</em>."</p>
+</div>
+
+<p>E um detalhe que apareceu nos próprios dados: os e-mails de "Conciliação Maio/2026" na
+caixa de teste vieram de <strong>pedro@oibill.com.br</strong> — o pipeline classificou
+todos como ruído, corretamente. Vale citar que
+<code>payment_schedules</code> guarda banco, data e <strong>protocolo</strong>
+justamente para reconciliar depois.</p>
+
+<h2>Se sobrar tempo — o que eu faria a seguir</h2>
+
+<p>Aprender template por fornecedor a partir das correções humanas.
+<code>review_actions</code> é o sinal de treino: depois de N extrações confirmadas do
+mesmo remetente e layout, promover para parser determinístico e tirar aquele fornecedor
+do caminho do LLM.</p>
+
+<div class="fala">
+  <p>"O custo cai e a confiança sobe com o uso — que é a curva certa para um produto que
+  ganha clientes."</p>
+</div>
+
+</body>
+</html>
